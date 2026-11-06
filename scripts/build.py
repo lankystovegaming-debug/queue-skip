@@ -1,5 +1,6 @@
 """Generate direct, refresh-safe pages for GitHub Pages. No dependencies needed."""
 from pathlib import Path
+from hashlib import sha256
 import re
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -7,6 +8,9 @@ slugs = re.findall(r"slug:'([^']+)'", (ROOT / 'assets/data.js').read_text())
 
 def page(route='', title='Canteen favourites, without the wait'):
     prefix = '../' if route else './'
+    def asset(name):
+        digest = sha256((ROOT / 'assets' / name).read_bytes()).hexdigest()[:12]
+        return f'{prefix}assets/{name}?v={digest}'
     return f'''<!doctype html>
 <html lang="en-SG">
 <head>
@@ -16,10 +20,10 @@ def page(route='', title='Canteen favourites, without the wait'):
   <meta name="description" content="Pre-order your school canteen favourites and make more of your break with Queue Skip.">
   <title>{title} · Queue Skip</title>
   <link rel="icon" href="{prefix}assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="{prefix}assets/style.css">
-  <script src="{prefix}assets/data.js" defer></script>
-  <script src="{prefix}assets/payment.js" defer></script>
-  <script src="{prefix}assets/app.js" defer></script>
+  <link rel="stylesheet" href="{asset('style.css')}">
+  <script src="{asset('data.js')}" defer></script>
+  <script src="{asset('payment.js')}" defer></script>
+  <script src="{asset('app.js')}" defer></script>
 </head>
 <body data-page="{route}" data-base="{prefix}">
   <a class="skip-link" href="#main">Skip to content</a>
