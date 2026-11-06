@@ -80,9 +80,22 @@
               <p id="pickup-help" class="field-help">Choose your recess or lunch break, at least 5 minutes from now. All times are Singapore time.</p>
               <label class="form-field notes-field" for="order-notes">Order notes <span>(optional)</span><textarea id="order-notes" name="notes" maxlength="300" rows="3" placeholder="Anything you would like the stall to know?"></textarea></label>
             </fieldset>
-            <fieldset class="checkout-section"><legend><span class="section-number">03</span> Payment</legend><div class="payment-option"><span class="payment-radio" aria-hidden="true"></span><div><strong>Pay at pickup</strong><p>A placeholder for now. Online payment is not enabled.</p></div></div></fieldset>
+            <fieldset class="checkout-section"><legend><span class="section-number">03</span> Payment</legend>
+              <div class="payment-choices">
+                <label class="payment-option"><input type="radio" name="paymentMethod" value="pickup" checked><span><strong>Pay at pickup</strong><span class="payment-description">A placeholder for payment at the stall.</span></span></label>
+                <label class="payment-option"><input type="radio" name="paymentMethod" value="online"><span><strong>Online payment <span class="demo-tag">DEMO</span></strong><span class="payment-description">Try a card payment. Nothing will be charged.</span></span></label>
+              </div>
+              <fieldset id="demo-card-fields" class="demo-card-fields" hidden disabled><legend>Test card details</legend>
+                <p class="field-help">Use made-up details only. Card details are not sent or saved.</p><button type="button" class="test-card-button" id="fill-test-card">Use a test card</button>
+                <label class="form-field" for="card-holder">Name on test card<input id="card-holder" type="text" autocomplete="off" maxlength="70" required aria-describedby="card-holder-error"><span id="card-holder-error" class="field-error" hidden></span></label>
+                <label class="form-field" for="card-number">Card number<input id="card-number" type="text" inputmode="numeric" autocomplete="off" placeholder="4242 4242 4242 4242" maxlength="25" required aria-describedby="card-number-error"><span id="card-number-error" class="field-error" hidden></span></label>
+                <div class="field-grid"><label class="form-field" for="card-expiry">Expiry date<input id="card-expiry" type="text" inputmode="numeric" autocomplete="off" placeholder="MM/YY" maxlength="5" required aria-describedby="card-expiry-error"><span id="card-expiry-error" class="field-error" hidden></span></label>
+                <label class="form-field" for="card-cvv">Security code<input id="card-cvv" type="password" inputmode="numeric" autocomplete="off" placeholder="3 or 4 digits" maxlength="4" required aria-describedby="card-cvv-error"><span id="card-cvv-error" class="field-error" hidden></span></label></div>
+                <p class="field-error" id="card-error-summary" role="alert" hidden>Please check the highlighted card details.</p>
+              </fieldset>
+            </fieldset>
           </form>
-          <section id="checkout-review" class="checkout-review" hidden aria-labelledby="review-title"><span class="review-check" aria-hidden="true">✓</span><p class="eyebrow">READY FOR A FINAL LOOK</p><h2 id="review-title" tabindex="-1">Your pre-order preview.</h2><p class="review-intro">Check the details below. This preview has not been sent to the canteen.</p><dl><div><dt>Collecting for</dt><dd id="review-student"></dd></div><div><dt>Pickup</dt><dd id="review-pickup"></dd></div><div><dt>Collection point</dt><dd>Collect from each stall in the school canteen</dd></div><div><dt>Payment</dt><dd>Pay at pickup (preview)</dd></div><div id="review-notes-row" hidden><dt>Order notes</dt><dd id="review-notes"></dd></div></dl><button type="button" class="button" id="edit-checkout">← Edit details</button></section>
+          <section id="checkout-review" class="checkout-review" hidden aria-labelledby="review-title"><span class="review-check" aria-hidden="true">✓</span><p class="eyebrow">READY FOR A FINAL LOOK</p><h2 id="review-title" tabindex="-1">Your pre-order preview.</h2><p class="review-intro">Check the details below. This preview has not been sent to the canteen.</p><dl><div><dt>Collecting for</dt><dd id="review-student"></dd></div><div><dt>Pickup</dt><dd id="review-pickup"></dd></div><div><dt>Collection point</dt><dd>Collect from each stall in the school canteen</dd></div><div><dt>Payment</dt><dd id="review-payment">Pay at pickup (preview)</dd></div><div id="review-notes-row" hidden><dt>Order notes</dt><dd id="review-notes"></dd></div></dl><button type="button" class="button" id="edit-checkout">← Edit details</button></section>
         </div>
         <aside class="order-summary checkout-summary" aria-labelledby="summary-heading"><div class="summary-heading"><div><p class="eyebrow">YOUR BREAK, SORTED</p><h2 id="summary-heading">Order summary</h2></div><a class="text-link" href="${url('cart')}">Edit cart</a></div>
           ${groups.map(s=>`<section class="checkout-stall"><h3>${s.name}</h3>${wait}<ul>${s.menu.filter(m=>cart[s.slug+':'+m[0]]).map(m=>`<li><span class="summary-qty">${cart[s.slug+':'+m[0]]}×</span><span>${m[1]}</span><strong>${money(cart[s.slug+':'+m[0]]*m[3])}</strong></li>`).join('')}</ul></section>`).join('')}
@@ -164,11 +177,64 @@
     date.min = singaporeTime().date;
     time.setCustomValidity(date.value && time.value && `${date.value}T${time.value}` < `${earliest.date}T${earliest.time}` ? 'Choose a pickup time at least 5 minutes from now (Singapore time).' : '');
   }
+  const cardFields = {holder:'card-holder',number:'card-number',expiry:'card-expiry',cvv:'card-cvv'};
+  function validatePayment(showAll = false) {
+    const form = document.getElementById('checkout-form');
+    if (!form || form.elements.paymentMethod.value !== 'online') return;
+    const details = Object.fromEntries(Object.entries(cardFields).map(([key,id])=>[key,document.getElementById(id).value]));
+    const current = singaporeTime().date.split('-').map(Number);
+    const errors = window.demoCardErrors(details,{year:current[0],month:current[1]});
+    for (const [key,id] of Object.entries(cardFields)) {
+      const input = document.getElementById(id);
+      const message = errors[key] || '';
+      input.setCustomValidity(message);
+      if (showAll) input.dataset.touched='true';
+      const visible = input.dataset.touched === 'true' && !!message;
+      const error = document.getElementById(id+'-error');
+      error.textContent=message;
+      error.hidden=!visible;
+      if (visible) input.setAttribute('aria-invalid','true');
+      else input.removeAttribute('aria-invalid');
+    }
+    document.getElementById('card-error-summary').hidden=!Object.values(cardFields).some(id=>document.getElementById(id).getAttribute('aria-invalid')==='true');
+  }
+  app.addEventListener('change',event=>{
+    if (event.target.name!=='paymentMethod') return;
+    const online=event.target.value==='online';
+    const fields=document.getElementById('demo-card-fields');
+    fields.hidden=!online;
+    fields.disabled=!online;
+    if (!online) {
+      for (const id of Object.values(cardFields)) {
+        const input=document.getElementById(id);
+        input.value=''; input.setCustomValidity(''); delete input.dataset.touched;
+        input.removeAttribute('aria-invalid');
+        document.getElementById(id+'-error').hidden=true;
+      }
+      document.getElementById('card-error-summary').hidden=true;
+    } else validatePayment();
+  });
+  app.addEventListener('focusout',event=>{
+    if(Object.values(cardFields).includes(event.target.id)) {
+      event.target.dataset.touched='true';
+      validatePayment();
+    }
+  });
+  app.addEventListener('invalid',event=>{
+    if(Object.values(cardFields).includes(event.target.id)) validatePayment(true);
+  },true);
   app.addEventListener('input',event=>{
-    if(event.target.closest('#checkout-form')) validatePickup();
+    if(event.target.closest('#checkout-form')) { validatePickup(); validatePayment(); }
   });
   app.addEventListener('click',event=>{
-    if(event.target.closest('#review-order-button')) validatePickup();
+    if(event.target.closest('#review-order-button')) { validatePickup(); validatePayment(true); }
+    if(event.target.closest('#fill-test-card')) {
+      const current=singaporeTime().date.split('-');
+      const samples={holder:'Demo Cardholder',number:'4242 4242 4242 4242',expiry:`${current[1]}/${String(Number(current[0])+1).slice(-2)}`,cvv:'123'};
+      for (const [key,id] of Object.entries(cardFields)) document.getElementById(id).value=samples[key];
+      validatePayment(true);
+      announce('Test card details filled. No payment will be processed.');
+    }
     if(event.target.closest('#edit-checkout')) {
       document.getElementById('checkout-form').hidden=false;
       document.getElementById('checkout-review').hidden=true;
@@ -183,11 +249,15 @@
     if(event.target.id!=='checkout-form')return;
     event.preventDefault();
     validatePickup();
+    validatePayment(true);
     if(!event.target.reportValidity())return;
     const fields=event.target.elements;
     document.getElementById('review-student').textContent=`${fields.studentName.value.trim()} · ${fields.studentClass.value.trim()}`;
     const pickup=new Date(`${fields.pickupDate.value}T${fields.pickupTime.value}:00+08:00`);
     document.getElementById('review-pickup').textContent=new Intl.DateTimeFormat('en-SG',{timeZone:'Asia/Singapore',weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}).format(pickup)+' (SGT)';
+    const online=fields.paymentMethod.value==='online';
+    const lastFour=document.getElementById('card-number').value.replace(/[ -]/g,'').slice(-4);
+    document.getElementById('review-payment').textContent=online?`Online payment demo · card ending ${lastFour} · no charge`:'Pay at pickup (preview)';
     document.getElementById('review-notes').textContent=fields.notes.value.trim();
     document.getElementById('review-notes-row').hidden=!fields.notes.value.trim();
     event.target.hidden=true;

@@ -1,0 +1,18 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+const context = {window:{}};
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../assets/payment.js'),'utf8'),context);
+const validate = details => context.window.demoCardErrors(details,{year:2026,month:11});
+const valid = {holder:'Demo Cardholder',number:'4242 4242 4242 4242',expiry:'11/26',cvv:'123'};
+assert.equal(Object.keys(validate(valid)).length,0,'current expiry month is valid');
+for(const number of ['4242424242424242','4242-4242-4242-4242']) assert.equal(validate({...valid,number}).number,undefined);
+for(const number of ['424242424242424','42424242424242424','424242424242424a','0000000000000000','4242424242424241']) assert.ok(validate({...valid,number}).number,number);
+for(const expiry of ['10/26','12/25','00/27','13/27','1/27','11/2027','']) assert.ok(validate({...valid,expiry}).expiry,expiry);
+for(const expiry of ['12/26','01/27']) assert.equal(validate({...valid,expiry}).expiry,undefined);
+for(const cvv of ['','12','12345','12a']) assert.ok(validate({...valid,cvv}).cvv,cvv);
+assert.equal(validate({...valid,cvv:'1234'}).cvv,undefined);
+assert.ok(validate({...valid,holder:'   '}).holder);
+assert.equal(Object.keys(validate({holder:'',number:'',expiry:'',cvv:''})).length,4);
+console.log('Passed card validation: required fields, length, characters, checksum, expiry boundaries, and security codes.');

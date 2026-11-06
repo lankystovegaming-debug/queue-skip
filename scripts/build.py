@@ -18,6 +18,7 @@ def page(route='', title='Canteen favourites, without the wait'):
   <link rel="icon" href="{prefix}assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="{prefix}assets/style.css">
   <script src="{prefix}assets/data.js" defer></script>
+  <script src="{prefix}assets/payment.js" defer></script>
   <script src="{prefix}assets/app.js" defer></script>
 </head>
 <body data-page="{route}" data-base="{prefix}">
