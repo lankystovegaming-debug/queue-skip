@@ -1,0 +1,21 @@
+const assert=require('node:assert/strict'),vm=require('node:vm');
+const output=require('esbuild').buildSync({entryPoints:['client/database.js'],bundle:true,platform:'node',format:'cjs',external:['@supabase/supabase-js'],write:false}).outputFiles[0].text;
+let rpcRequest,anonymousCalls=0,session={access_token:'test-only'};
+const client={auth:{getSession:async()=>({data:{session}}),signInAnonymously:async()=>{anonymousCalls++;session={access_token:'test-only'};return{data:{session}};}},rpc:async(name,params)=>{rpcRequest={name,params};return{data:name==='get_my_receipts'?[]:{id:'QS-ABCDEF123456'}};}};
+const context={window:{},localStorage:{setItem(){},removeItem(){}},require:name=>{assert.equal(name,'@supabase/supabase-js');return{createClient:()=>client};}};
+vm.runInNewContext(output,context);
+(async()=>{
+ const db=context.window.queueDatabase;
+ const draft={requestId:'same-retry-id',studentName:'Demo',studentClass:'3A',pickupDate:'2026-11-07',pickupTime:'10:30',notes:'',paymentMethod:'online',lastFour:'3456',number:'1234567890123456',cvv:'123',expiry:'11/27',holder:'Demo',items:[{menuItemId:'golden-grain:chicken-rice',price:450,quantity:1},{menuItemId:'fresh-squeeze:orange-juice',price:250,quantity:1}]};
+ await db.placeOrder(draft);
+ assert.equal(rpcRequest.name,'place_guest_order');assert.equal(rpcRequest.params.p_expected_total,700);assert.equal(rpcRequest.params.p_request_id,draft.requestId);
+ const sent=JSON.stringify(rpcRequest.params);
+ for(const secret of ['1234567890123456','3456','cvv','expiry','holder'])assert.equal(sent.includes(secret),false,secret);
+ assert.equal(Object.keys(rpcRequest.params.p_items[0]).join(','),'id,quantity');
+ session=null;await db.listOrders();assert.equal(anonymousCalls,0,'viewing receipts does not create a guest unnecessarily');
+ await db.placeOrder(draft);assert.equal(anonymousCalls,1,'checkout silently creates guest');
+ assert.equal(rpcRequest.params.p_request_id,'same-retry-id','request ID survives retry');
+ client.rpc=async()=>({error:{code:'P0001',message:'Menu prices changed.'}});
+ await assert.rejects(db.placeOrder(draft),/Menu prices changed/);
+ console.log('Passed browser-client request checks: silent guest checkout, retry identity, card-data exclusion, and save errors.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

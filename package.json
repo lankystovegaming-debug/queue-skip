@@ -1,0 +1,15 @@
+{
+  "name": "queue-skip",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-client.cjs && python3 scripts/build.py",
+    "test": "node tests/payment.cjs && node tests/orders.cjs && node tests/database-client.cjs && node tests/app.cjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.119.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

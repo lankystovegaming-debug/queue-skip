@@ -10,6 +10,7 @@
   const receiptHistoryKey = 'queue-skip-demo-receipts-v1';
   let reviewedOrder = null;
   let confirmingOrder = false;
+  let databaseReceipts=[];
   const catalogue = new Map(stalls.flatMap(s => s.menu.map(m => [s.slug + ':' + m[0], {stall:s, item:m}])));
   let cart = {};
   let storageAvailable = true;
@@ -17,7 +18,7 @@
     const saved = JSON.parse(localStorage.getItem(cartKey) || '{}');
     if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
       for (const [key, value] of Object.entries(saved)) {
-        if (catalogue.has(key) && Number.isInteger(value) && value > 0 && value <= 99) cart[key] = value;
+        if (/^[a-z0-9-]+:[a-z0-9-]+$/.test(key) && Number.isInteger(value) && value > 0 && value <= 99) cart[key] = value;
       }
     }
   } catch { /* A malformed or unavailable saved cart starts empty. */ }
@@ -38,23 +39,23 @@
     else if (kind === 'noodles') food = `<ellipse cx="150" cy="160" rx="98" ry="15" fill="#b87b60" opacity=".22"/><path d="M48 100h204c-16 91-188 91-204 0Z" fill="#365c4a"/><ellipse cx="150" cy="100" rx="102" ry="35" fill="#fdf1d0"/><ellipse cx="150" cy="99" rx="88" ry="27" fill="#b7793d"/><path d="M77 96q25-34 50-8t51 3 48 7M72 105q27-28 50-4t50 3 53 2M94 112q16-33 47-16t57 17M96 80q27 31 66 1t45 19" fill="none" stroke="#efc177" stroke-width="6" stroke-linecap="round"/><path d="m102 77 13 22m61-15 14 27m-48-4-9 15" stroke="#578858" stroke-width="8" stroke-linecap="round"/><path d="m211 18-73 75m91-64-74 75" stroke="#694333" stroke-width="5" stroke-linecap="round"/>`;
     else if (kind === 'fruit') food = `<ellipse cx="150" cy="171" rx="105" ry="13" fill="#74934c" opacity=".2"/><path d="M172 42h61l-7 104q-23 21-47 0Z" fill="#fff9e8"/><path d="M178 72h49l-5 70q-19 13-37 0Z" fill="#eda94f"/><path d="m210 67 17-56" stroke="#476f4d" stroke-width="7" stroke-linecap="round"/><ellipse cx="202" cy="42" rx="30" ry="7" fill="#fdf6df"/><path d="M45 95h129l-12 53q-49 35-105 0Z" fill="#fff9e8"/><ellipse cx="109" cy="95" rx="65" ry="18" fill="#e9e4c7"/><path d="m61 95 29-47 43 43Z" fill="#6b9954"/><path d="m69 93 23-36 31 33Z" fill="#e57e73"/><path d="m113 81 32-15 18 31-31 9Z" fill="#eac65f"/><path d="m73 111 22-26 28 25-24 19Z" fill="#eea567"/><circle cx="139" cy="112" r="21" fill="#97b761"/><path d="m151 85 11-15m-77 9 2 5m13-6 2 5m4-17 2 5" stroke="#4f693c" stroke-width="3" stroke-linecap="round"/>`;
     else food = `<ellipse cx="150" cy="157" rx="102" ry="17" fill="#ba9754" opacity=".22"/><ellipse cx="150" cy="116" rx="109" ry="57" fill="#fff9e8"/><ellipse cx="150" cy="116" rx="93" ry="45" fill="#eae2c8"/><path d="M69 123c-7-69 85-82 90-4Z" fill="#fff7de"/><path d="m82 99 10-7m9 12 9-8m-22 18 11-7m19 4 9-7m-8-16 8-5" stroke="#dfd4b5" stroke-width="3" stroke-linecap="round"/><path d="M159 81q42-16 62 20l-28 34-44-16Z" fill="${variant ? '#a75b32' : '#d8a164'}"/><path d="m160 90 36 25m-27-34 36 25m-28-34 35 24" stroke="${variant ? '#763c2a' : '#fff0cc'}" stroke-width="7" stroke-linecap="round"/><circle cx="217" cy="124" r="16" fill="#669759"/><circle cx="217" cy="124" r="10" fill="#b6ce82"/><circle cx="199" cy="140" r="14" fill="#669759"/><circle cx="199" cy="140" r="8" fill="#b6ce82"/><ellipse cx="151" cy="141" rx="18" ry="11" fill="#ae4e32"/>`;
-    return `<svg class="food-art" viewBox="0 0 300 200" role="img" aria-label="${label}">${food}</svg>`;
+    return `<svg class="food-art" viewBox="0 0 300 200" role="img" aria-label="${escapeHTML(label)}">${food}</svg>`;
   }
   function home() {
-    return `<main id="main"><section class="hero"><div class="hero-copy"><p class="eyebrow"><span class="tiny-star">✳</span> YOUR CANTEEN FAVOURITES, ONE TAP AWAY</p><h1>More makan.<br>Less <span class="serif">waiting.</span></h1><p class="hero-text">From your first kopi to your last bite.<br>Order ahead and skip straight to the good part.</p><a class="button" href="#stalls">Find your next bite <span aria-hidden="true">↓</span></a><div class="hero-note"><span class="small-dot"></span> Made for the way we makan.</div></div><div class="hero-visual" aria-hidden="true"><div class="hero-disc"></div><div class="hero-rice">${art('rice')}</div><div class="hero-kopi">${art('coffee')}</div><div class="hero-sticker">LESS QUEUE<span>more shiok!</span><i>✳</i></div><div class="hero-caption">Your usual, without the usual wait.</div></div></section><section id="stalls" class="stalls-section"><div class="section-top"><div><p class="eyebrow">A LITTLE OF EVERYTHING</p><h2>What are you craving?</h2></div><span class="stall-total">${stalls.length} stalls. So many good choices.</span></div><div class="discovery"><div class="filters" role="group" aria-label="Filter stalls by category">${['All stalls',...new Set(stalls.map(stall=>stall.category))].map((c,i)=>`<button class="filter ${!i?'selected':''}" data-category="${c}" aria-pressed="${!i}">${c}</button>`).join('')}</div><label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 5 5"/></svg><input id="search" type="search" placeholder="Search stalls or dishes" aria-label="Search stalls or dishes"></label></div><p id="results-status" class="sr-only" role="status"></p><div class="stall-grid" id="stall-grid">${stalls.map(stallCard).join('')}</div><p class="no-results" id="no-results" hidden>No stalls found. Try another dish or category.</p></section><section class="bottom-note"><span class="note-symbol" aria-hidden="true">✳</span><div><h2>All your favourites. One happy cart.</h2><p>Mix it up across stalls and make your next meal a good one.</p></div><a href="${url('cart')}">See your cart <span aria-hidden="true">→</span></a></section></main>`;
+    return `<main id="main"><section class="hero"><div class="hero-copy"><p class="eyebrow"><span class="tiny-star">✳</span> YOUR CANTEEN FAVOURITES, ONE TAP AWAY</p><h1>More makan.<br>Less <span class="serif">waiting.</span></h1><p class="hero-text">From your first kopi to your last bite.<br>Order ahead and skip straight to the good part.</p><a class="button" href="#stalls">Find your next bite <span aria-hidden="true">↓</span></a><div class="hero-note"><span class="small-dot"></span> Made for the way we makan.</div></div><div class="hero-visual" aria-hidden="true"><div class="hero-disc"></div><div class="hero-rice">${art('rice')}</div><div class="hero-kopi">${art('coffee')}</div><div class="hero-sticker">LESS QUEUE<span>more shiok!</span><i>✳</i></div><div class="hero-caption">Your usual, without the usual wait.</div></div></section><section id="stalls" class="stalls-section"><div class="section-top"><div><p class="eyebrow">A LITTLE OF EVERYTHING</p><h2>What are you craving?</h2></div><span class="stall-total">${stalls.length} stalls. So many good choices.</span></div><div class="discovery"><div class="filters" role="group" aria-label="Filter stalls by category">${['All stalls',...new Set(stalls.map(stall=>stall.category))].map((c,i)=>`<button class="filter ${!i?'selected':''}" data-category="${escapeHTML(c)}" aria-pressed="${!i}">${escapeHTML(c)}</button>`).join('')}</div><label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 5 5"/></svg><input id="search" type="search" placeholder="Search stalls or dishes" aria-label="Search stalls or dishes"></label></div><p id="results-status" class="sr-only" role="status"></p><div class="stall-grid" id="stall-grid">${stalls.map(stallCard).join('')}</div><p class="no-results" id="no-results" hidden>No stalls found. Try another dish or category.</p></section><section class="bottom-note"><span class="note-symbol" aria-hidden="true">✳</span><div><h2>All your favourites. One happy cart.</h2><p>Mix it up across stalls and make your next meal a good one.</p></div><a href="${url('cart')}">See your cart <span aria-hidden="true">→</span></a></section></main>`;
   }
   function stallCard(s) {
-    return `<a class="stall-card" href="${url(s.slug)}"><div class="card-visual" style="--food-bg:${s.color}"><span class="stall-unit">STALL ${s.unit}</span>${art(s.icon,s.label,s.unit==='03')}<span class="category-tag">${s.category}</span></div><div class="card-body"><div class="card-heading"><h3>${s.name}</h3><span class="card-arrow" aria-hidden="true">↗</span></div><p>${s.label}</p><div class="card-bottom">${wait}<span class="starting-price">From ${money(Math.min(...s.menu.map(m=>m[3])))}</span></div></div></a>`;
+    return `<a class="stall-card" href="${url(s.slug)}"><div class="card-visual" style="--food-bg:${s.color}"><span class="stall-unit">STALL ${escapeHTML(s.unit)}</span>${art(s.icon,s.label,s.unit==='03')}<span class="category-tag">${escapeHTML(s.category)}</span></div><div class="card-body"><div class="card-heading"><h3>${escapeHTML(s.name)}</h3><span class="card-arrow" aria-hidden="true">↗</span></div><p>${escapeHTML(s.label)}</p><div class="card-bottom">${wait}<span class="starting-price">From ${money(Math.min(...s.menu.map(m=>m[3])))}</span></div></div></a>`;
   }
   function stallPage(s) {
-    return `<main id="main" class="menu-page"><a class="back-link" href="${url('')}">← All stalls</a><section class="stall-hero" style="--food-bg:${s.color}"><div><p class="eyebrow">STALL ${s.unit} <span> / </span> ${s.category.toUpperCase()}</p><h1>${s.name}</h1><p class="stall-description">${s.description}</p>${wait}</div><div class="stall-hero-art">${art(s.icon,s.label,s.unit==='03')}</div></section><div class="menu-heading"><div><p class="eyebrow">FRESH FROM THE STALL</p><h2>The good stuff</h2></div><span>All prices in SGD</span></div><div class="menu-grid">${s.menu.map((m,i)=>`<article class="menu-item"><div class="menu-item-copy">${i===0?'<span class="popular">HOUSE FAVOURITE</span>':''}<h3>${m[1]}</h3><p>${m[2]}</p><strong>${money(m[3])}</strong></div><div class="menu-item-action"><span class="dish-number" aria-hidden="true">0${i+1}</span><button class="add-button" data-add="${s.slug}:${m[0]}" aria-label="Add ${m[1]} to cart"><span aria-hidden="true">+</span> Add</button></div></article>`).join('')}</div><div class="menu-cart-bar"><span>${bag}<span><strong data-item-summary>${count()} ${count()===1?'item':'items'} in your cart</strong><small>Something good is coming together.</small></span></span><a class="button" href="${url('cart')}">View cart <span data-cart-total>${money(total())}</span> →</a></div></main>`;
+    return `<main id="main" class="menu-page"><a class="back-link" href="${url('')}">← All stalls</a><section class="stall-hero" style="--food-bg:${s.color}"><div><p class="eyebrow">STALL ${escapeHTML(s.unit)} <span> / </span> ${escapeHTML(s.category.toUpperCase())}</p><h1>${escapeHTML(s.name)}</h1><p class="stall-description">${escapeHTML(s.description)}</p>${wait}</div><div class="stall-hero-art">${art(s.icon,s.label,s.unit==='03')}</div></section><div class="menu-heading"><div><p class="eyebrow">FRESH FROM THE STALL</p><h2>The good stuff</h2></div><span>All prices in SGD</span></div><div class="menu-grid">${s.menu.map((m,i)=>`<article class="menu-item"><div class="menu-item-copy">${i===0?'<span class="popular">HOUSE FAVOURITE</span>':''}<h3>${escapeHTML(m[1])}</h3><p>${escapeHTML(m[2])}</p><strong>${money(m[3])}</strong></div><div class="menu-item-action"><span class="dish-number" aria-hidden="true">0${i+1}</span><button class="add-button" data-add="${s.slug}:${m[0]}" aria-label="Add ${escapeHTML(m[1])} to cart" ${m[4]===false || s.isOpen===false?'disabled':''}><span aria-hidden="true">+</span> ${m[4]===false || s.isOpen===false?'Unavailable':'Add'}</button></div></article>`).join('')}</div><div class="menu-cart-bar"><span>${bag}<span><strong data-item-summary>${count()} ${count()===1?'item':'items'} in your cart</strong><small>Something good is coming together.</small></span></span><a class="button" href="${url('cart')}">View cart <span data-cart-total>${money(total())}</span> →</a></div></main>`;
   }
   function quantity(key,qty,name) {
-    return `<div class="quantity"><button data-change="${key}" data-delta="-1" aria-label="${qty===1?'Remove':'Decrease quantity of'} ${name}">−</button><span aria-label="Quantity ${qty}">${qty}</span><button data-change="${key}" data-delta="1" aria-label="Increase quantity of ${name}" ${qty>=99?'disabled':''}>+</button></div>`;
+    return `<div class="quantity"><button data-change="${key}" data-delta="-1" aria-label="${qty===1?'Remove':'Decrease quantity of'} ${escapeHTML(name)}">−</button><span aria-label="Quantity ${qty}">${qty}</span><button data-change="${key}" data-delta="1" aria-label="Increase quantity of ${escapeHTML(name)}" ${qty>=99?'disabled':''}>+</button></div>`;
   }
   function cartPage() {
     const groups = stalls.filter(s=>s.menu.some(m=>cart[s.slug+':'+m[0]]));
-    return `<main id="main" class="cart-page"><a class="back-link" href="${url('')}">← Keep exploring</a><div class="cart-title"><p class="eyebrow">YOUR NEXT GOOD MEAL</p><h1>Your cart<span class="serif">.</span></h1><p>${count()?`${count()} ${count()===1?'item':'items'} from ${groups.length} ${groups.length===1?'stall':'stalls'}. A little of what you love.`:'A good meal starts with a little exploring.'}</p></div>${count()?`<div class="cart-layout"><div class="cart-groups">${groups.map(s=>`<section class="cart-group"><div class="cart-group-header"><div><span class="eyebrow">STALL ${s.unit}</span><h2><a href="${url(s.slug)}">${s.name}</a></h2></div><a class="text-link" href="${url(s.slug)}">Add more ↗</a></div><div class="cart-wait">${wait}</div>${s.menu.filter(m=>cart[s.slug+':'+m[0]]).map(m=>{const key=s.slug+':'+m[0],qty=cart[key];return `<article class="cart-row"><div><h3>${m[1]}</h3><span class="unit-price">${money(m[3])} each</span></div><div class="cart-row-actions">${quantity(key,qty,m[1])}<strong>${money(m[3]*qty)}</strong><button class="remove-button" data-remove="${key}" aria-label="Remove all ${m[1]} from cart">Remove</button></div></article>`;}).join('')}</section>`).join('')}</div><aside class="order-summary"><p class="eyebrow">LOOKING GOOD</p><h2>Your meal, sorted.</h2><div class="summary-line"><span>Subtotal (${count()} ${count()===1?'item':'items'})</span><span>${money(total())}</span></div><div class="summary-total"><span>Total</span><strong>${money(total())}</strong></div><a class="button" href="${url('checkout')}">Continue to checkout <span aria-hidden="true">→</span></a><p class="summary-note">All prices in Singapore dollars.</p></aside></div>`:`<section class="empty-cart"><span class="empty-bag">${bag}</span><h2>Room for something shiok.</h2><p>Pick a stall, find your favourites, and add them here.</p><a class="button" href="${url('')}">Explore the stalls <span aria-hidden="true">↗</span></a></section>`}</main>`;
+    return `<main id="main" class="cart-page"><a class="back-link" href="${url('')}">← Keep exploring</a><div class="cart-title"><p class="eyebrow">YOUR NEXT GOOD MEAL</p><h1>Your cart<span class="serif">.</span></h1><p>${count()?`${count()} ${count()===1?'item':'items'} from ${groups.length} ${groups.length===1?'stall':'stalls'}. A little of what you love.`:'A good meal starts with a little exploring.'}</p></div>${count()?`<div class="cart-layout"><div class="cart-groups">${groups.map(s=>`<section class="cart-group"><div class="cart-group-header"><div><span class="eyebrow">STALL ${escapeHTML(s.unit)}</span><h2><a href="${url(s.slug)}">${escapeHTML(s.name)}</a></h2></div><a class="text-link" href="${url(s.slug)}">Add more ↗</a></div><div class="cart-wait">${wait}</div>${s.menu.filter(m=>cart[s.slug+':'+m[0]]).map(m=>{const key=s.slug+':'+m[0],qty=cart[key];return `<article class="cart-row"><div><h3>${escapeHTML(m[1])}</h3><span class="unit-price">${money(m[3])} each</span></div><div class="cart-row-actions">${quantity(key,qty,m[1])}<strong>${money(m[3]*qty)}</strong><button class="remove-button" data-remove="${key}" aria-label="Remove all ${escapeHTML(m[1])} from cart">Remove</button></div></article>`;}).join('')}</section>`).join('')}</div><aside class="order-summary"><p class="eyebrow">LOOKING GOOD</p><h2>Your meal, sorted.</h2><div class="summary-line"><span>Subtotal (${count()} ${count()===1?'item':'items'})</span><span>${money(total())}</span></div><div class="summary-total"><span>Total</span><strong>${money(total())}</strong></div><a class="button" href="${url('checkout')}">Continue to checkout <span aria-hidden="true">→</span></a><p class="summary-note">All prices in Singapore dollars.</p></aside></div>`:`<section class="empty-cart"><span class="empty-bag">${bag}</span><h2>Room for something shiok.</h2><p>Pick a stall, find your favourites, and add them here.</p><a class="button" href="${url('')}">Explore the stalls <span aria-hidden="true">↗</span></a></section>`}</main>`;
   }
   function singaporeTime(date = new Date()) {
     const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
@@ -71,7 +72,7 @@
       <div class="checkout-title"><p class="eyebrow">MAKE THE MOST OF YOUR BREAK</p><h1>Checkout<span class="serif">.</span></h1><p>A good meal, ready for your school day.</p></div>
       ${!count()?`<section class="empty-cart"><span class="empty-bag">${bag}</span><h2>Pick your favourites first.</h2><p>Add something from the canteen before checking out.</p><a class="button" href="${url('')}">Explore the stalls ↗</a></section>`:`
       <ol class="checkout-steps" aria-label="Checkout progress"><li><span>✓</span> Your cart</li><li aria-current="step"><span>2</span> Checkout</li><li><span>3</span> Review</li></ol>
-      <p class="preview-notice"><strong>A first look at checkout.</strong> This is a preview. No order will be sent and no payment will be taken.</p>
+      <p class="preview-notice"><strong>Guest checkout.</strong> Your order will be saved to Queue Skip. This is a school project: stalls are not notified and no payments are taken.</p>
       <div class="checkout-layout">
         <div>
           <form id="checkout-form">
@@ -100,11 +101,11 @@
               </fieldset>
             </fieldset>
           </form>
-          <section id="checkout-review" class="checkout-review" hidden aria-labelledby="review-title"><span class="review-check" aria-hidden="true">✓</span><p class="eyebrow">READY FOR A FINAL LOOK</p><h2 id="review-title" tabindex="-1">Your pre-order preview.</h2><p class="review-intro">Check the details below. This preview has not been sent to the canteen.</p><dl><div><dt>Collecting for</dt><dd id="review-student"></dd></div><div><dt>Pickup</dt><dd id="review-pickup"></dd></div><div><dt>Collection point</dt><dd>Collect from each stall in the school canteen</dd></div><div><dt>Payment</dt><dd id="review-payment">Pay at pickup (preview)</dd></div><div id="review-notes-row" hidden><dt>Order notes</dt><dd id="review-notes"></dd></div></dl><div class="review-actions"><button type="button" class="button secondary-button" id="edit-checkout">← Edit details</button><button type="button" class="button" id="confirm-order">Confirm order <span aria-hidden="true">→</span></button></div><p class="field-help">The next step asks you to confirm this demo order.</p>
-          <dialog id="order-confirm-dialog" class="order-dialog" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-description"><span class="review-check" aria-hidden="true">✓</span><p class="eyebrow">ONE LAST CHECK</p><h2 id="confirm-dialog-title">Confirm your order?</h2><p id="confirm-dialog-description">Your demo pre-order will be confirmed and your cart will be cleared. No order will be sent to a stall and no payment will be taken.</p><p class="dialog-total">Order total <strong>${money(total())}</strong></p><p id="confirm-order-error" class="field-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button secondary-button" id="cancel-order" autofocus>Go back</button><button type="button" class="button" id="accept-order">Yes, confirm order</button></div></dialog></section>
+          <section id="checkout-review" class="checkout-review" hidden aria-labelledby="review-title"><span class="review-check" aria-hidden="true">✓</span><p class="eyebrow">READY FOR A FINAL LOOK</p><h2 id="review-title" tabindex="-1">Review your pre-order.</h2><p class="review-intro">Check your details before saving the order to Queue Skip.</p><dl><div><dt>Collecting for</dt><dd id="review-student"></dd></div><div><dt>Pickup</dt><dd id="review-pickup"></dd></div><div><dt>Collection point</dt><dd>Collect from each stall in the school canteen</dd></div><div><dt>Payment</dt><dd id="review-payment">Pay at pickup (preview)</dd></div><div id="review-notes-row" hidden><dt>Order notes</dt><dd id="review-notes"></dd></div></dl><div class="review-actions"><button type="button" class="button secondary-button" id="edit-checkout">← Edit details</button><button type="button" class="button" id="confirm-order">Confirm order <span aria-hidden="true">→</span></button></div><p class="field-help">Confirming saves your order and clears your cart once it succeeds.</p>
+          <dialog id="order-confirm-dialog" class="order-dialog" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-description"><span class="review-check" aria-hidden="true">✓</span><p class="eyebrow">ONE LAST CHECK</p><h2 id="confirm-dialog-title">Confirm your order?</h2><p id="confirm-dialog-description">Save this pre-order to Queue Skip? Your cart clears only after it is saved. Stalls are not notified and no payment will be taken.</p><p class="dialog-total">Order total <strong>${money(total())}</strong></p><p id="confirm-order-error" class="field-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button secondary-button" id="cancel-order" autofocus>Go back</button><button type="button" class="button" id="accept-order">Yes, confirm order</button></div></dialog></section>
         </div>
         <aside class="order-summary checkout-summary" aria-labelledby="summary-heading"><div class="summary-heading"><div><p class="eyebrow">YOUR BREAK, SORTED</p><h2 id="summary-heading">Order summary</h2></div><a class="text-link" href="${url('cart')}">Edit cart</a></div>
-          ${groups.map(s=>`<section class="checkout-stall"><h3>${s.name}</h3>${wait}<ul>${s.menu.filter(m=>cart[s.slug+':'+m[0]]).map(m=>`<li><span class="summary-qty">${cart[s.slug+':'+m[0]]}×</span><span>${m[1]}</span><strong>${money(cart[s.slug+':'+m[0]]*m[3])}</strong></li>`).join('')}</ul></section>`).join('')}
+          ${groups.map(s=>`<section class="checkout-stall"><h3>${escapeHTML(s.name)}</h3>${wait}<ul>${s.menu.filter(m=>cart[s.slug+':'+m[0]]).map(m=>`<li><span class="summary-qty">${cart[s.slug+':'+m[0]]}×</span><span>${escapeHTML(m[1])}</span><strong>${money(cart[s.slug+':'+m[0]]*m[3])}</strong></li>`).join('')}</ul></section>`).join('')}
           <div class="summary-line"><span>Subtotal (${count()} ${count()===1?'item':'items'})</span><span>${money(total())}</span></div><div class="summary-total"><span>Total</span><strong>${money(total())}</strong></div>
           <button class="button" id="review-order-button" type="submit" form="checkout-form">Review pre-order <span aria-hidden="true">→</span></button><p class="summary-note">Preview only · All prices in SGD</p>
         </aside>
@@ -117,29 +118,29 @@
   }).format(new Date(value))+' (SGT)';
   function readReceipts() {
     try {
-      const orders=window.demoOrders.parseHistory(sessionStorage.getItem(receiptHistoryKey));
+      const orders=[...databaseReceipts,...window.demoOrders.parseHistory(sessionStorage.getItem(receiptHistoryKey))];
       const latest=window.demoOrders.parse(sessionStorage.getItem(receiptKey));
       if(latest && !orders.some(order=>order.id===latest.id)) orders.push(latest);
-      return orders.sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt));
-    } catch { return []; }
+      return [...new Map(orders.map(order=>[order.id,order])).values()].sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt));
+    } catch { return [...databaseReceipts]; }
   }
   function receiptsPage() {
     const orders=readReceipts();
-    return `<main id="main" class="receipts-page"><div class="checkout-title"><p class="eyebrow">YOUR CANTEEN ORDERS</p><h1>Your receipts<span class="serif">.</span></h1><p>All your confirmed demo orders, in one place.</p></div><p class="preview-notice">Receipts are saved in this browser tab for this session. These are demo orders; nothing was sent or charged.</p>${orders.length?`<div class="receipts-list">${orders.map(order=>{const qty=order.items.reduce((sum,item)=>sum+item.quantity,0);return `<a class="receipt-list-card" href="${url('order-confirmation')}?order=${encodeURIComponent(order.id)}"><div class="receipt-list-top"><span class="receipt-list-id">${escapeHTML(order.id)}</span><span class="receipt-badge">CONFIRMED · DEMO</span></div><p class="receipt-list-date">${escapeHTML(formatOrderTime(order.createdAt))}</p><h2>${escapeHTML([...new Set(order.items.map(item=>item.stall))].join(' + '))}</h2><p class="receipt-list-pickup">Pickup: ${escapeHTML(formatOrderTime(`${order.pickupDate}T${order.pickupTime}:00+08:00`))}</p><div class="receipt-list-bottom"><span>${qty} ${qty===1?'item':'items'}</span><strong>${money(order.total)}</strong><span class="receipt-view">View receipt →</span></div></a>`;}).join('')}</div>`:`<section class="empty-cart"><span class="empty-bag">${bag}</span><h2>No receipts yet.</h2><p>Once you confirm a demo order, its receipt will appear here.</p><a class="button" href="${url('')}">Explore the stalls ↗</a></section>`}</main>`;
+    return `<main id="main" class="receipts-page"><div class="checkout-title"><p class="eyebrow">YOUR CANTEEN ORDERS</p><h1>Your receipts<span class="serif">.</span></h1><p>All your confirmed orders, in one place.</p></div><p class="preview-notice">Saved orders are private to this browser’s guest session. Earlier demo receipts from this tab may also appear. No payments are processed.</p>${orders.length?`<div class="receipts-list">${orders.map(order=>{const qty=order.items.reduce((sum,item)=>sum+item.quantity,0);return `<a class="receipt-list-card" href="${url('order-confirmation')}?order=${encodeURIComponent(order.id)}"><div class="receipt-list-top"><span class="receipt-list-id">${escapeHTML(order.id)}</span><span class="receipt-badge">CONFIRMED · DEMO</span></div><p class="receipt-list-date">${escapeHTML(formatOrderTime(order.createdAt))}</p><h2>${escapeHTML([...new Set(order.items.map(item=>item.stall))].join(' + '))}</h2><p class="receipt-list-pickup">Pickup: ${escapeHTML(formatOrderTime(`${order.pickupDate}T${order.pickupTime}:00+08:00`))}</p><div class="receipt-list-bottom"><span>${qty} ${qty===1?'item':'items'}</span><strong>${money(order.total)}</strong><span class="receipt-view">View receipt →</span></div></a>`;}).join('')}</div>`:`<section class="empty-cart"><span class="empty-bag">${bag}</span><h2>No receipts yet.</h2><p>Once you confirm a demo order, its receipt will appear here.</p><a class="button" href="${url('')}">Explore the stalls ↗</a></section>`}</main>`;
   }
   function confirmationPage() {
     const requestedId=new URLSearchParams(location.search).get('order');
     const receipts=readReceipts();
     const order=requestedId?receipts.find(receipt=>receipt.id===requestedId):receipts[0];
-    if(!order) return `<main id="main" class="checkout-page"><div class="checkout-title"><p class="eyebrow">YOUR PRE-ORDER</p><h1>Nothing here yet<span class="serif">.</span></h1></div><section class="empty-cart"><span class="empty-bag">${bag}</span><h2>No confirmed order in this tab.</h2><p>Choose your food and confirm it at checkout to see the details here.</p><a class="button" href="${url('')}">Explore the stalls ↗</a></section></main>`;
+    if(!order) return `<main id="main" class="checkout-page"><div class="checkout-title"><p class="eyebrow">YOUR PRE-ORDER</p><h1>Nothing here yet<span class="serif">.</span></h1></div><section class="empty-cart"><span class="empty-bag">${bag}</span><h2>No saved order found.</h2><p>Choose your food and confirm it at checkout to see the details here.</p><a class="button" href="${url('')}">Explore the stalls ↗</a></section></main>`;
     const groups=[...new Set(order.items.map(item=>item.stall))];
     const itemCount=order.items.reduce((sum,item)=>sum+item.quantity,0);
     return `<main id="main" class="confirmation-page"><section class="confirmation-heading"><span class="success-symbol" aria-hidden="true">✓</span><p class="eyebrow">DEMO ORDER CONFIRMED</p><h1>Your order has been sent!</h1><p>More time for your break. Here are your pre-order details.</p></section>
-      <p class="preview-notice"><strong>Demo only.</strong> No order has actually been sent to a stall and no payment has been taken.</p>
+      <p class="preview-notice"><strong>${order.source==='database'?'Saved to Queue Skip.':'Earlier local demo.'}</strong> This school project does not notify stalls or take payments.</p>
       <div class="receipt-layout"><section class="receipt-card" aria-labelledby="receipt-heading"><div class="receipt-heading"><div><p class="eyebrow">YOUR ORDER REFERENCE</p><h2 id="receipt-heading">${escapeHTML(order.id)}</h2></div><span class="receipt-badge">CONFIRMED · DEMO</span></div><p class="receipt-created">Confirmed ${escapeHTML(formatOrderTime(order.createdAt))}</p>
       ${groups.map(stall=>{const items=order.items.filter(item=>item.stall===stall);return `<section class="receipt-stall"><div class="receipt-stall-title"><div><p class="eyebrow">STALL ${escapeHTML(items[0].unit)}</p><h3>${escapeHTML(stall)}</h3></div>${wait}</div><ul>${items.map(item=>`<li><span class="summary-qty">${item.quantity}×</span><span>${escapeHTML(item.name)}<small>${money(item.price)} each</small></span><strong>${money(item.price*item.quantity)}</strong></li>`).join('')}</ul></section>`;}).join('')}
       <div class="receipt-total"><span>Total (${itemCount} ${itemCount===1?'item':'items'})</span><strong>${money(order.total)}</strong></div><p class="field-help">All prices in Singapore dollars.</p></section>
-      <aside class="receipt-details"><h2>Pickup details</h2><dl><div><dt>Collecting for</dt><dd>${escapeHTML(order.studentName)}<small>Class ${escapeHTML(order.studentClass)}</small></dd></div><div><dt>Pickup date & time</dt><dd>${escapeHTML(formatOrderTime(`${order.pickupDate}T${order.pickupTime}:00+08:00`))}</dd></div><div><dt>Where to collect</dt><dd>School canteen<small>Collect each item directly from its stall.</small></dd></div><div><dt>Payment</dt><dd>${order.paymentMethod==='online'?`Online payment · demo<small>Test card ending ${escapeHTML(order.lastFour)}. No charge was made.</small>`:`Pay at pickup · demo<small>${money(order.total)} would be due at the stalls.</small>`}</dd></div>${order.notes?`<div><dt>Order notes</dt><dd class="receipt-notes">${escapeHTML(order.notes)}</dd></div>`:''}</dl><p class="receipt-tip">Keep this order reference handy when collecting your food.</p></aside></div><div class="receipt-bottom"><a class="button" href="${url('')}">Back to stalls <span aria-hidden="true">↗</span></a><span>This demo receipt stays available in this browser tab.</span></div></main>`;
+      <aside class="receipt-details"><h2>Pickup details</h2><dl><div><dt>Collecting for</dt><dd>${escapeHTML(order.studentName)}<small>Class ${escapeHTML(order.studentClass)}</small></dd></div><div><dt>Pickup date & time</dt><dd>${escapeHTML(formatOrderTime(`${order.pickupDate}T${order.pickupTime}:00+08:00`))}</dd></div><div><dt>Where to collect</dt><dd>School canteen<small>Collect each item directly from its stall.</small></dd></div><div><dt>Payment</dt><dd>${order.paymentMethod==='online'?`Online payment · demo<small>${order.lastFour?'Test card ending '+escapeHTML(order.lastFour)+'. ':''}No charge was made.</small>`:`Pay at pickup · demo<small>${money(order.total)} would be due at the stalls.</small>`}</dd></div>${order.notes?`<div><dt>Order notes</dt><dd class="receipt-notes">${escapeHTML(order.notes)}</dd></div>`:''}</dl><p class="receipt-tip">Keep this order reference handy when collecting your food.</p></aside></div><div class="receipt-bottom"><a class="button" href="${url('')}">Back to stalls <span aria-hidden="true">↗</span></a><span>${order.source==='database'?'Saved privately for this browser’s guest session. Clearing browser data loses guest access.':'This earlier demo receipt is available in this tab only.'}</span></div></main>`;
   }
   const app = document.getElementById('app');
   function render() {
@@ -169,6 +170,8 @@
     const filter = event.target.closest('[data-category]');
     if (add) {
       const key=add.dataset.add;
+      const entry=catalogue.get(key);
+      if(!entry || entry.stall.isOpen===false || entry.item[4]===false) { announce('This item is currently unavailable.'); return; }
       if ((cart[key]||0)>=99) { announce('You can add up to 99 of each item.'); return; }
       cart[key]=(cart[key]||0)+1;
       save();
@@ -293,7 +296,7 @@
     }
     if(event.target.closest('#checkout-form')) { validatePickup(); validatePayment(); }
   });
-  app.addEventListener('click',event=>{
+  app.addEventListener('click',async event=>{
     if(event.target.closest('#review-order-button')) { validatePickup(); validatePayment(true); }
     if(event.target.closest('#fill-test-card')) {
       const current=singaporeTime().date.split('-');
@@ -311,33 +314,22 @@
     if(event.target.closest('#accept-order') && !confirmingOrder && reviewStillValid()) {
       confirmingOrder=true;
       const accept=document.getElementById('accept-order');
+      const cancel=document.getElementById('cancel-order');
       accept.disabled=true;
-      const id='QS-DEMO-'+crypto.randomUUID().replaceAll('-','').slice(0,8).toUpperCase();
-      const order=window.demoOrders.create(reviewedOrder,id,new Date().toISOString());
-      let previousReceipt=null;
-      let previousHistory=null;
+      cancel.disabled=true;
+      accept.textContent='Saving order…';
       try {
-        previousReceipt=sessionStorage.getItem(receiptKey);
-        previousHistory=sessionStorage.getItem(receiptHistoryKey);
-        const history=readReceipts().filter(receipt=>receipt.id!==order.id);
-        sessionStorage.setItem(receiptHistoryKey,JSON.stringify([order,...history]));
-        sessionStorage.setItem(receiptKey,JSON.stringify(order));
-        localStorage.setItem(cartKey,'{}');
-      } catch {
-        try {
-          if(previousReceipt===null) sessionStorage.removeItem(receiptKey);
-          else sessionStorage.setItem(receiptKey,previousReceipt);
-          if(previousHistory===null) sessionStorage.removeItem(receiptHistoryKey);
-          else sessionStorage.setItem(receiptHistoryKey,previousHistory);
-        } catch { /* Browser storage may be unavailable. */ }
-        confirmingOrder=false; accept.disabled=false;
+        const order=await window.queueDatabase.placeOrder(reviewedOrder);
+        cart={};
+        try { localStorage.setItem(cartKey,'{}'); } catch { /* Order is already saved; do not resubmit it. */ }
+        location.assign(url('order-confirmation')+'?order='+encodeURIComponent(order.id));
+      } catch (failure) {
+        confirmingOrder=false; accept.disabled=false;cancel.disabled=false;
+        accept.textContent='Yes, confirm order';
         const error=document.getElementById('confirm-order-error');
-        error.textContent='Your browser could not save this demo order. Enable browser storage and try again. Your cart has not been changed.';
+        error.textContent=failure.message||'We could not confirm your order. Your cart has been kept. Please try again.';
         error.hidden=false;
-        return;
       }
-      cart={};
-      location.assign(url('order-confirmation'));
     }
   });
   app.addEventListener('submit',event=>{
@@ -354,12 +346,13 @@
     const lastFour=document.getElementById('card-number').value.replace(/ /g,'').slice(-4);
     document.getElementById('review-payment').textContent=online?`Online payment demo · card ending ${lastFour} · no charge`:'Pay at pickup (preview)';
     reviewedOrder={
+      requestId:crypto.randomUUID(),
       studentName:fields.studentName.value.trim(), studentClass:fields.studentClass.value.trim(),
       pickupDate:fields.pickupDate.value,pickupTime:fields.pickupTime.value,notes:fields.notes.value.trim(),
       paymentMethod:fields.paymentMethod.value,lastFour:online?lastFour:'',
       items:Object.entries(cart).map(([key,quantity])=>{
         const {stall,item}=catalogue.get(key);
-        return {stall:stall.name,unit:stall.unit,name:item[1],price:item[3],quantity};
+        return {menuItemId:key,stall:stall.name,unit:stall.unit,name:item[1],price:item[3],quantity};
       })
     };
     document.getElementById('review-notes').textContent=fields.notes.value.trim();
@@ -374,5 +367,28 @@
   });
   window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
   window.addEventListener('storage',event=>{if(event.key===cartKey)location.reload();});
-  render();
+  app.addEventListener('cancel',event=>{if(confirmingOrder)event.preventDefault();},true);
+  async function boot() {
+    app.innerHTML=header()+`<main id="main" class="checkout-page"><p class="loading-message" role="status">Loading the canteen…</p></main>`+footer();
+    try {
+      const menu=await window.queueDatabase.getMenu();
+      stalls.splice(0,stalls.length,...menu);
+      catalogue.clear();
+      stalls.forEach(stall=>stall.menu.forEach(item=>catalogue.set(stall.slug+':'+item[0],{stall,item})));
+      let removed=false;
+      for(const key of Object.keys(cart)) if(!catalogue.has(key)) {delete cart[key];removed=true;}
+      if(removed)save();
+      if(['receipts','order-confirmation'].includes(page)) {
+        const receipts=await window.queueDatabase.listOrders();
+        databaseReceipts=receipts.map(order=>window.demoOrders.parse(JSON.stringify(order))).filter(Boolean);
+      }
+      render();
+      if(removed)announce('An item is no longer on the menu and was removed from your cart.');
+    } catch(failure) {
+      app.innerHTML=header()+`<main id="main" class="checkout-page"><section class="empty-cart"><h1 class="load-error-title">Please try again.</h1><p id="load-error-message" role="alert"></p><button class="button" id="retry-loading">Retry loading</button></section></main>`+footer();
+      document.getElementById('load-error-message').textContent=failure.message||'Queue Skip could not connect. Your cart has been kept.';
+    }
+  }
+  app.addEventListener('click',event=>{if(event.target.closest('#retry-loading'))boot();});
+  boot();
 })();

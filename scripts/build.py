@@ -24,6 +24,7 @@ def page(route='', title='Canteen favourites, without the wait'):
   <script src="{asset('data.js')}" defer></script>
   <script src="{asset('payment.js')}" defer></script>
   <script src="{asset('orders.js')}" defer></script>
+  <script src="{asset('vendor/database.js')}" defer></script>
   <script src="{asset('app.js')}" defer></script>
 </head>
 <body data-page="{route}" data-base="{prefix}">

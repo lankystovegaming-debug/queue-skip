@@ -26,3 +26,8 @@ assert.equal(orders.parseHistory('{}').length,0);
 const other=orders.create(draft,'QS-DEMO-ZZ12CD34',order.createdAt);
 assert.equal(orders.parseHistory(JSON.stringify([other,order])).length,2);
 console.log('Passed receipt history checks for multiple orders, duplicates, and malformed entries.');
+
+const databaseOrder={...order,source:'database',id:'QS-ABCDEF123456',lastFour:''};
+assert.equal(orders.parse(JSON.stringify(databaseOrder)).source,'database');
+assert.equal(orders.parse(JSON.stringify(databaseOrder)).lastFour,'');
+console.log('Passed database receipt compatibility without stored card digits.');
