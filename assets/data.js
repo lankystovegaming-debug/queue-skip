@@ -34,5 +34,13 @@ window.STALLS = [
     ['chendol','Chendol','Pandan jelly, coconut milk & rich gula melaka.',320],
     ['cheng-tng','Cheng Tng','A refreshing longan & white fungus dessert, served cold.',280],
     ['grass-jelly','Grass Jelly Drink','Chilled grass jelly with a light sugar syrup.',200]
+  ]},
+  {slug:'fresh-squeeze', name:'Fresh Squeeze', category:'Fruit & Juice', label:'Fresh fruit & freshly blended juices', unit:'07', icon:'fruit', color:'#d7dfa0', description:'A fresh little boost for your school day. Juicy fruit cups and refreshing drinks, made to order.', menu:[
+    ['watermelon-cup','Watermelon Cup','Chilled, freshly cut watermelon for a refreshing snack.',150],
+    ['mixed-fruit','Mixed Fruit Cup','A colourful mix of watermelon, papaya & pineapple.',200],
+    ['orange-juice','Fresh Orange Juice','Freshly squeezed oranges, with no added sugar.',250],
+    ['watermelon-juice','Watermelon Juice','Fresh watermelon blended with ice.',220],
+    ['apple-juice','Fresh Apple Juice','Freshly juiced apples, served chilled.',250],
+    ['banana-smoothie','Banana Milk Smoothie','Banana blended with milk for a creamy break-time treat.',300]
   ]}
 ];

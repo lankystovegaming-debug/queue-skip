@@ -14,6 +14,17 @@ window.demoOrders = {
       items, total:items.reduce((sum,item)=>sum+item.price*item.quantity,0)
     };
   },
+  parseHistory(raw) {
+    try {
+      const entries=JSON.parse(raw);
+      if(!Array.isArray(entries)) return [];
+      const seen=new Set();
+      return entries.map(entry=>this.parse(JSON.stringify(entry))).filter(order=>{
+        if(!order || seen.has(order.id)) return false;
+        seen.add(order.id); return true;
+      });
+    } catch { return []; }
+  },
   parse(raw) {
     try {
       const order=JSON.parse(raw);

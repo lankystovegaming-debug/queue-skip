@@ -7,6 +7,7 @@
   const url = route => base + (route ? route + '/' : '');
   const cartKey = 'queue-skip-cart-v1';
   const receiptKey = 'queue-skip-demo-order-v1';
+  const receiptHistoryKey = 'queue-skip-demo-receipts-v1';
   let reviewedOrder = null;
   let confirmingOrder = false;
   const catalogue = new Map(stalls.flatMap(s => s.menu.map(m => [s.slug + ':' + m[0], {stall:s, item:m}])));
@@ -26,7 +27,7 @@
   const clock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>';
   const logo = `<span class="logo-mark" aria-hidden="true">≋</span><span>queue<span class="logo-light">skip</span><span class="logo-dot">.</span></span>`;
   const wait = `<span class="wait">${clock} Estimated waiting time: 5 minutes</span>`;
-  const header = () => `<header class="site-header"><div class="header-inner"><a class="brand" href="${url('')}" aria-label="Queue Skip home">${logo}</a><nav aria-label="Main navigation"><a class="nav-stalls ${!['cart','checkout','order-confirmation'].includes(page) ? 'active' : ''}" href="${url('')}">Explore stalls</a><a class="cart-link" href="${url('cart')}">${bag}<span>Your cart</span><span class="cart-count" aria-label="${count()} ${count()===1?'item':'items'}">${count()}</span></a></nav></div></header>`;
+  const header = () => `<header class="site-header"><div class="header-inner"><a class="brand" href="${url('')}" aria-label="Queue Skip home">${logo}</a><nav aria-label="Main navigation"><a class="nav-stalls ${!['cart','checkout','order-confirmation','receipts'].includes(page) ? 'active' : ''}" href="${url('')}">Explore stalls</a><a class="nav-receipts ${['receipts','order-confirmation'].includes(page)?'active':''}" href="${url('receipts')}">Receipts</a><a class="cart-link" href="${url('cart')}">${bag}<span>Your cart</span><span class="cart-count" aria-label="${count()} ${count()===1?'item':'items'}">${count()}</span></a></nav></div></header>`;
   const footer = () => `<footer class="site-footer"><a class="brand" href="${url('')}">${logo}</a><span>Good food. Less waiting.</span><span>Made for your next makan.</span></footer>`;
   function art(kind, label='', variant=0) {
     // Original vector food illustrations; no external image requests.
@@ -35,11 +36,12 @@
     else if (kind === 'prata') food = `<ellipse cx="150" cy="149" rx="105" ry="33" fill="#b78952" opacity=".2"/><ellipse cx="150" cy="126" rx="108" ry="57" fill="#fff9e8"/><ellipse cx="141" cy="120" rx="73" ry="43" fill="#c2833c"/><ellipse cx="141" cy="113" rx="73" ry="43" fill="#edbd70"/><path d="M91 97q52-34 96 8m-92 17q38-28 88 3m-66-44q-9 34 36 60" stroke="#cb9048" stroke-width="6" fill="none" stroke-linecap="round"/><ellipse cx="221" cy="85" rx="30" ry="24" fill="#f7f1db"/><ellipse cx="221" cy="81" rx="23" ry="16" fill="#af552d"/><circle cx="215" cy="80" r="4" fill="#d58c4a"/><path d="m226 72-5 12" stroke="#53824f" stroke-width="4"/>`;
     else if (kind === 'dessert') food = `<ellipse cx="150" cy="163" rx="86" ry="14" fill="#9b7c90" opacity=".2"/><path d="M64 111h172c-8 81-161 81-172 0" fill="#f9f3e6"/><ellipse cx="150" cy="111" rx="86" ry="23" fill="#e8dbc9"/><path d="M79 110q16-54 71-76 56 23 73 76Z" fill="#fff6e1"/><path d="M84 99q16-42 45-51l14 68Z" fill="#d98091"/><path d="m145 39 23 9 7 70h-31Z" fill="#8bb685"/><path d="m175 55 23 23 18 29-34 8Z" fill="#e5b455"/><ellipse cx="150" cy="115" rx="68" ry="12" fill="#bf7691"/><circle cx="103" cy="113" r="6" fill="#834139"/><circle cx="118" cy="120" r="5" fill="#834139"/><circle cx="132" cy="112" r="6" fill="#834139"/>`;
     else if (kind === 'noodles') food = `<ellipse cx="150" cy="160" rx="98" ry="15" fill="#b87b60" opacity=".22"/><path d="M48 100h204c-16 91-188 91-204 0Z" fill="#365c4a"/><ellipse cx="150" cy="100" rx="102" ry="35" fill="#fdf1d0"/><ellipse cx="150" cy="99" rx="88" ry="27" fill="#b7793d"/><path d="M77 96q25-34 50-8t51 3 48 7M72 105q27-28 50-4t50 3 53 2M94 112q16-33 47-16t57 17M96 80q27 31 66 1t45 19" fill="none" stroke="#efc177" stroke-width="6" stroke-linecap="round"/><path d="m102 77 13 22m61-15 14 27m-48-4-9 15" stroke="#578858" stroke-width="8" stroke-linecap="round"/><path d="m211 18-73 75m91-64-74 75" stroke="#694333" stroke-width="5" stroke-linecap="round"/>`;
+    else if (kind === 'fruit') food = `<ellipse cx="150" cy="171" rx="105" ry="13" fill="#74934c" opacity=".2"/><path d="M172 42h61l-7 104q-23 21-47 0Z" fill="#fff9e8"/><path d="M178 72h49l-5 70q-19 13-37 0Z" fill="#eda94f"/><path d="m210 67 17-56" stroke="#476f4d" stroke-width="7" stroke-linecap="round"/><ellipse cx="202" cy="42" rx="30" ry="7" fill="#fdf6df"/><path d="M45 95h129l-12 53q-49 35-105 0Z" fill="#fff9e8"/><ellipse cx="109" cy="95" rx="65" ry="18" fill="#e9e4c7"/><path d="m61 95 29-47 43 43Z" fill="#6b9954"/><path d="m69 93 23-36 31 33Z" fill="#e57e73"/><path d="m113 81 32-15 18 31-31 9Z" fill="#eac65f"/><path d="m73 111 22-26 28 25-24 19Z" fill="#eea567"/><circle cx="139" cy="112" r="21" fill="#97b761"/><path d="m151 85 11-15m-77 9 2 5m13-6 2 5m4-17 2 5" stroke="#4f693c" stroke-width="3" stroke-linecap="round"/>`;
     else food = `<ellipse cx="150" cy="157" rx="102" ry="17" fill="#ba9754" opacity=".22"/><ellipse cx="150" cy="116" rx="109" ry="57" fill="#fff9e8"/><ellipse cx="150" cy="116" rx="93" ry="45" fill="#eae2c8"/><path d="M69 123c-7-69 85-82 90-4Z" fill="#fff7de"/><path d="m82 99 10-7m9 12 9-8m-22 18 11-7m19 4 9-7m-8-16 8-5" stroke="#dfd4b5" stroke-width="3" stroke-linecap="round"/><path d="M159 81q42-16 62 20l-28 34-44-16Z" fill="${variant ? '#a75b32' : '#d8a164'}"/><path d="m160 90 36 25m-27-34 36 25m-28-34 35 24" stroke="${variant ? '#763c2a' : '#fff0cc'}" stroke-width="7" stroke-linecap="round"/><circle cx="217" cy="124" r="16" fill="#669759"/><circle cx="217" cy="124" r="10" fill="#b6ce82"/><circle cx="199" cy="140" r="14" fill="#669759"/><circle cx="199" cy="140" r="8" fill="#b6ce82"/><ellipse cx="151" cy="141" rx="18" ry="11" fill="#ae4e32"/>`;
     return `<svg class="food-art" viewBox="0 0 300 200" role="img" aria-label="${label}">${food}</svg>`;
   }
   function home() {
-    return `<main id="main"><section class="hero"><div class="hero-copy"><p class="eyebrow"><span class="tiny-star">✳</span> YOUR CANTEEN FAVOURITES, ONE TAP AWAY</p><h1>More makan.<br>Less <span class="serif">waiting.</span></h1><p class="hero-text">From your first kopi to your last bite.<br>Order ahead and skip straight to the good part.</p><a class="button" href="#stalls">Find your next bite <span aria-hidden="true">↓</span></a><div class="hero-note"><span class="small-dot"></span> Made for the way we makan.</div></div><div class="hero-visual" aria-hidden="true"><div class="hero-disc"></div><div class="hero-rice">${art('rice')}</div><div class="hero-kopi">${art('coffee')}</div><div class="hero-sticker">LESS QUEUE<span>more shiok!</span><i>✳</i></div><div class="hero-caption">Your usual, without the usual wait.</div></div></section><section id="stalls" class="stalls-section"><div class="section-top"><div><p class="eyebrow">A LITTLE OF EVERYTHING</p><h2>What are you craving?</h2></div><span class="stall-total">6 stalls. So many good choices.</span></div><div class="discovery"><div class="filters" role="group" aria-label="Filter stalls by category">${['All stalls','Rice','Noodles','Prata','Drinks','Desserts'].map((c,i)=>`<button class="filter ${!i?'selected':''}" data-category="${c}" aria-pressed="${!i}">${c}</button>`).join('')}</div><label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 5 5"/></svg><input id="search" type="search" placeholder="Search stalls or dishes" aria-label="Search stalls or dishes"></label></div><p id="results-status" class="sr-only" role="status"></p><div class="stall-grid" id="stall-grid">${stalls.map(stallCard).join('')}</div><p class="no-results" id="no-results" hidden>No stalls found. Try another dish or category.</p></section><section class="bottom-note"><span class="note-symbol" aria-hidden="true">✳</span><div><h2>All your favourites. One happy cart.</h2><p>Mix it up across stalls and make your next meal a good one.</p></div><a href="${url('cart')}">See your cart <span aria-hidden="true">→</span></a></section></main>`;
+    return `<main id="main"><section class="hero"><div class="hero-copy"><p class="eyebrow"><span class="tiny-star">✳</span> YOUR CANTEEN FAVOURITES, ONE TAP AWAY</p><h1>More makan.<br>Less <span class="serif">waiting.</span></h1><p class="hero-text">From your first kopi to your last bite.<br>Order ahead and skip straight to the good part.</p><a class="button" href="#stalls">Find your next bite <span aria-hidden="true">↓</span></a><div class="hero-note"><span class="small-dot"></span> Made for the way we makan.</div></div><div class="hero-visual" aria-hidden="true"><div class="hero-disc"></div><div class="hero-rice">${art('rice')}</div><div class="hero-kopi">${art('coffee')}</div><div class="hero-sticker">LESS QUEUE<span>more shiok!</span><i>✳</i></div><div class="hero-caption">Your usual, without the usual wait.</div></div></section><section id="stalls" class="stalls-section"><div class="section-top"><div><p class="eyebrow">A LITTLE OF EVERYTHING</p><h2>What are you craving?</h2></div><span class="stall-total">${stalls.length} stalls. So many good choices.</span></div><div class="discovery"><div class="filters" role="group" aria-label="Filter stalls by category">${['All stalls',...new Set(stalls.map(stall=>stall.category))].map((c,i)=>`<button class="filter ${!i?'selected':''}" data-category="${c}" aria-pressed="${!i}">${c}</button>`).join('')}</div><label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 5 5"/></svg><input id="search" type="search" placeholder="Search stalls or dishes" aria-label="Search stalls or dishes"></label></div><p id="results-status" class="sr-only" role="status"></p><div class="stall-grid" id="stall-grid">${stalls.map(stallCard).join('')}</div><p class="no-results" id="no-results" hidden>No stalls found. Try another dish or category.</p></section><section class="bottom-note"><span class="note-symbol" aria-hidden="true">✳</span><div><h2>All your favourites. One happy cart.</h2><p>Mix it up across stalls and make your next meal a good one.</p></div><a href="${url('cart')}">See your cart <span aria-hidden="true">→</span></a></section></main>`;
   }
   function stallCard(s) {
     return `<a class="stall-card" href="${url(s.slug)}"><div class="card-visual" style="--food-bg:${s.color}"><span class="stall-unit">STALL ${s.unit}</span>${art(s.icon,s.label,s.unit==='03')}<span class="category-tag">${s.category}</span></div><div class="card-body"><div class="card-heading"><h3>${s.name}</h3><span class="card-arrow" aria-hidden="true">↗</span></div><p>${s.label}</p><div class="card-bottom">${wait}<span class="starting-price">From ${money(Math.min(...s.menu.map(m=>m[3])))}</span></div></div></a>`;
@@ -91,7 +93,7 @@
               <fieldset id="demo-card-fields" class="demo-card-fields" hidden disabled><legend>Test card details</legend>
                 <p class="field-help">Use made-up details only. Card details are not sent or saved.</p><button type="button" class="test-card-button" id="fill-test-card">Use a test card</button>
                 <label class="form-field" for="card-holder">Name on test card<input id="card-holder" type="text" autocomplete="off" maxlength="70" required aria-describedby="card-holder-error"><span id="card-holder-error" class="field-error" hidden></span></label>
-                <label class="form-field" for="card-number">Card number<input id="card-number" type="text" inputmode="numeric" autocomplete="off" placeholder="4242 4242 4242 4242" maxlength="25" required aria-describedby="card-number-error"><span id="card-number-error" class="field-error" hidden></span></label>
+                <label class="form-field" for="card-number">Card number<input id="card-number" type="text" inputmode="numeric" autocomplete="off" placeholder="1234 5678 9012 3456" maxlength="23" required aria-describedby="card-number-error"><span id="card-number-error" class="field-error" hidden></span></label>
                 <div class="field-grid"><label class="form-field" for="card-expiry">Expiry date<input id="card-expiry" type="text" inputmode="numeric" autocomplete="off" placeholder="MM/YY" maxlength="5" required aria-describedby="card-expiry-error"><span id="card-expiry-error" class="field-error" hidden></span></label>
                 <label class="form-field" for="card-cvv">Security code<input id="card-cvv" type="password" inputmode="numeric" autocomplete="off" placeholder="3 or 4 digits" maxlength="4" required aria-describedby="card-cvv-error"><span id="card-cvv-error" class="field-error" hidden></span></label></div>
                 <p class="field-error" id="card-error-summary" role="alert" hidden>Please check the highlighted card details.</p>
@@ -113,9 +115,22 @@
   const formatOrderTime = value => new Intl.DateTimeFormat('en-SG',{
     timeZone:'Asia/Singapore',weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'
   }).format(new Date(value))+' (SGT)';
+  function readReceipts() {
+    try {
+      const orders=window.demoOrders.parseHistory(sessionStorage.getItem(receiptHistoryKey));
+      const latest=window.demoOrders.parse(sessionStorage.getItem(receiptKey));
+      if(latest && !orders.some(order=>order.id===latest.id)) orders.push(latest);
+      return orders.sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt));
+    } catch { return []; }
+  }
+  function receiptsPage() {
+    const orders=readReceipts();
+    return `<main id="main" class="receipts-page"><div class="checkout-title"><p class="eyebrow">YOUR CANTEEN ORDERS</p><h1>Your receipts<span class="serif">.</span></h1><p>All your confirmed demo orders, in one place.</p></div><p class="preview-notice">Receipts are saved in this browser tab for this session. These are demo orders; nothing was sent or charged.</p>${orders.length?`<div class="receipts-list">${orders.map(order=>{const qty=order.items.reduce((sum,item)=>sum+item.quantity,0);return `<a class="receipt-list-card" href="${url('order-confirmation')}?order=${encodeURIComponent(order.id)}"><div class="receipt-list-top"><span class="receipt-list-id">${escapeHTML(order.id)}</span><span class="receipt-badge">CONFIRMED · DEMO</span></div><p class="receipt-list-date">${escapeHTML(formatOrderTime(order.createdAt))}</p><h2>${escapeHTML([...new Set(order.items.map(item=>item.stall))].join(' + '))}</h2><p class="receipt-list-pickup">Pickup: ${escapeHTML(formatOrderTime(`${order.pickupDate}T${order.pickupTime}:00+08:00`))}</p><div class="receipt-list-bottom"><span>${qty} ${qty===1?'item':'items'}</span><strong>${money(order.total)}</strong><span class="receipt-view">View receipt →</span></div></a>`;}).join('')}</div>`:`<section class="empty-cart"><span class="empty-bag">${bag}</span><h2>No receipts yet.</h2><p>Once you confirm a demo order, its receipt will appear here.</p><a class="button" href="${url('')}">Explore the stalls ↗</a></section>`}</main>`;
+  }
   function confirmationPage() {
-    let order=null;
-    try { order=window.demoOrders.parse(sessionStorage.getItem(receiptKey)); } catch { /* Show the missing-receipt state. */ }
+    const requestedId=new URLSearchParams(location.search).get('order');
+    const receipts=readReceipts();
+    const order=requestedId?receipts.find(receipt=>receipt.id===requestedId):receipts[0];
     if(!order) return `<main id="main" class="checkout-page"><div class="checkout-title"><p class="eyebrow">YOUR PRE-ORDER</p><h1>Nothing here yet<span class="serif">.</span></h1></div><section class="empty-cart"><span class="empty-bag">${bag}</span><h2>No confirmed order in this tab.</h2><p>Choose your food and confirm it at checkout to see the details here.</p><a class="button" href="${url('')}">Explore the stalls ↗</a></section></main>`;
     const groups=[...new Set(order.items.map(item=>item.stall))];
     const itemCount=order.items.reduce((sum,item)=>sum+item.quantity,0);
@@ -129,7 +144,7 @@
   const app = document.getElementById('app');
   function render() {
     const stall = stalls.find(s=>s.slug===page);
-    app.innerHTML = header() + (page==='order-confirmation'?confirmationPage():page==='checkout'?checkoutPage():page==='cart'?cartPage():stall?stallPage(stall):home()) + footer();
+    app.innerHTML = header() + (page==='receipts'?receiptsPage():page==='order-confirmation'?confirmationPage():page==='checkout'?checkoutPage():page==='cart'?cartPage():stall?stallPage(stall):home()) + footer();
   }
   let toastTimer;
   function announce(message) {
@@ -265,6 +280,17 @@
     if(Object.values(cardFields).includes(event.target.id)) validatePayment(true);
   },true);
   app.addEventListener('input',event=>{
+    if(event.target.id==='card-number') {
+      const input=event.target;
+      const before=input.value;
+      const digitsBefore=before.slice(0,input.selectionStart).replace(/ /g,'').length;
+      const formatted=window.formatDemoCardNumber(before);
+      if(formatted!==before) {
+        input.value=formatted;
+        const position=digitsBefore+Math.floor(Math.max(0,digitsBefore-1)/4);
+        input.setSelectionRange(position,position);
+      }
+    }
     if(event.target.closest('#checkout-form')) { validatePickup(); validatePayment(); }
   });
   app.addEventListener('click',event=>{
@@ -289,14 +315,20 @@
       const id='QS-DEMO-'+crypto.randomUUID().replaceAll('-','').slice(0,8).toUpperCase();
       const order=window.demoOrders.create(reviewedOrder,id,new Date().toISOString());
       let previousReceipt=null;
+      let previousHistory=null;
       try {
         previousReceipt=sessionStorage.getItem(receiptKey);
+        previousHistory=sessionStorage.getItem(receiptHistoryKey);
+        const history=readReceipts().filter(receipt=>receipt.id!==order.id);
+        sessionStorage.setItem(receiptHistoryKey,JSON.stringify([order,...history]));
         sessionStorage.setItem(receiptKey,JSON.stringify(order));
         localStorage.setItem(cartKey,'{}');
       } catch {
         try {
           if(previousReceipt===null) sessionStorage.removeItem(receiptKey);
           else sessionStorage.setItem(receiptKey,previousReceipt);
+          if(previousHistory===null) sessionStorage.removeItem(receiptHistoryKey);
+          else sessionStorage.setItem(receiptHistoryKey,previousHistory);
         } catch { /* Browser storage may be unavailable. */ }
         confirmingOrder=false; accept.disabled=false;
         const error=document.getElementById('confirm-order-error');
@@ -319,7 +351,7 @@
     const pickup=new Date(`${fields.pickupDate.value}T${fields.pickupTime.value}:00+08:00`);
     document.getElementById('review-pickup').textContent=new Intl.DateTimeFormat('en-SG',{timeZone:'Asia/Singapore',weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}).format(pickup)+' (SGT)';
     const online=fields.paymentMethod.value==='online';
-    const lastFour=document.getElementById('card-number').value.replace(/[ -]/g,'').slice(-4);
+    const lastFour=document.getElementById('card-number').value.replace(/ /g,'').slice(-4);
     document.getElementById('review-payment').textContent=online?`Online payment demo · card ending ${lastFour} · no charge`:'Pay at pickup (preview)';
     reviewedOrder={
       studentName:fields.studentName.value.trim(), studentClass:fields.studentClass.value.trim(),

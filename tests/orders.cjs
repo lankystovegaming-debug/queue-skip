@@ -19,3 +19,10 @@ const sanitized=orders.parse(JSON.stringify({...order,number:'4242424242424242',
 assert.equal(Object.hasOwn(sanitized,'number'),false);
 assert.equal(Object.hasOwn(sanitized,'cvv'),false);
 console.log('Passed receipt checks: totals, round-trip storage, malformed data, tampering, and exclusion of card details.');
+
+assert.equal(orders.parseHistory(JSON.stringify([order,order,{bad:true}])).length,1);
+assert.equal(orders.parseHistory('not JSON').length,0);
+assert.equal(orders.parseHistory('{}').length,0);
+const other=orders.create(draft,'QS-DEMO-ZZ12CD34',order.createdAt);
+assert.equal(orders.parseHistory(JSON.stringify([other,order])).length,2);
+console.log('Passed receipt history checks for multiple orders, duplicates, and malformed entries.');

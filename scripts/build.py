@@ -35,7 +35,7 @@ def page(route='', title='Canteen favourites, without the wait'):
 '''
 
 (ROOT / 'index.html').write_text(page())
-for slug in slugs + ['cart', 'checkout', 'order-confirmation']:
+for slug in slugs + ['cart', 'checkout', 'order-confirmation', 'receipts']:
     folder = ROOT / slug
     folder.mkdir(exist_ok=True)
     (folder / 'index.html').write_text(page(slug, 'Your cart' if slug == 'cart' else slug.replace('-', ' ').title()))
