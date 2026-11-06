@@ -23,6 +23,7 @@ def page(route='', title='Canteen favourites, without the wait'):
   <link rel="stylesheet" href="{asset('style.css')}">
   <script src="{asset('data.js')}" defer></script>
   <script src="{asset('payment.js')}" defer></script>
+  <script src="{asset('orders.js')}" defer></script>
   <script src="{asset('app.js')}" defer></script>
 </head>
 <body data-page="{route}" data-base="{prefix}">
@@ -34,9 +35,9 @@ def page(route='', title='Canteen favourites, without the wait'):
 '''
 
 (ROOT / 'index.html').write_text(page())
-for slug in slugs + ['cart', 'checkout']:
+for slug in slugs + ['cart', 'checkout', 'order-confirmation']:
     folder = ROOT / slug
     folder.mkdir(exist_ok=True)
     (folder / 'index.html').write_text(page(slug, 'Your cart' if slug == 'cart' else slug.replace('-', ' ').title()))
 (ROOT / '.nojekyll').touch()
-print(f'Built homepage, {len(slugs)} stall pages, cart, and checkout.')
+print(f'Built homepage, {len(slugs)} stall pages, cart, checkout, and order confirmation.')

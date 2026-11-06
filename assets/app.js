@@ -6,6 +6,9 @@
   const money = cents => `S$${(cents / 100).toFixed(2)}`;
   const url = route => base + (route ? route + '/' : '');
   const cartKey = 'queue-skip-cart-v1';
+  const receiptKey = 'queue-skip-demo-order-v1';
+  let reviewedOrder = null;
+  let confirmingOrder = false;
   const catalogue = new Map(stalls.flatMap(s => s.menu.map(m => [s.slug + ':' + m[0], {stall:s, item:m}])));
   let cart = {};
   let storageAvailable = true;
@@ -23,7 +26,7 @@
   const clock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>';
   const logo = `<span class="logo-mark" aria-hidden="true">≋</span><span>queue<span class="logo-light">skip</span><span class="logo-dot">.</span></span>`;
   const wait = `<span class="wait">${clock} Estimated waiting time: 5 minutes</span>`;
-  const header = () => `<header class="site-header"><div class="header-inner"><a class="brand" href="${url('')}" aria-label="Queue Skip home">${logo}</a><nav aria-label="Main navigation"><a class="nav-stalls ${page!=='cart' && page!=='checkout' ? 'active' : ''}" href="${url('')}">Explore stalls</a><a class="cart-link" href="${url('cart')}">${bag}<span>Your cart</span><span class="cart-count" aria-label="${count()} items">${count()}</span></a></nav></div></header>`;
+  const header = () => `<header class="site-header"><div class="header-inner"><a class="brand" href="${url('')}" aria-label="Queue Skip home">${logo}</a><nav aria-label="Main navigation"><a class="nav-stalls ${!['cart','checkout','order-confirmation'].includes(page) ? 'active' : ''}" href="${url('')}">Explore stalls</a><a class="cart-link" href="${url('cart')}">${bag}<span>Your cart</span><span class="cart-count" aria-label="${count()} ${count()===1?'item':'items'}">${count()}</span></a></nav></div></header>`;
   const footer = () => `<footer class="site-footer"><a class="brand" href="${url('')}">${logo}</a><span>Good food. Less waiting.</span><span>Made for your next makan.</span></footer>`;
   function art(kind, label='', variant=0) {
     // Original vector food illustrations; no external image requests.
@@ -95,7 +98,8 @@
               </fieldset>
             </fieldset>
           </form>
-          <section id="checkout-review" class="checkout-review" hidden aria-labelledby="review-title"><span class="review-check" aria-hidden="true">✓</span><p class="eyebrow">READY FOR A FINAL LOOK</p><h2 id="review-title" tabindex="-1">Your pre-order preview.</h2><p class="review-intro">Check the details below. This preview has not been sent to the canteen.</p><dl><div><dt>Collecting for</dt><dd id="review-student"></dd></div><div><dt>Pickup</dt><dd id="review-pickup"></dd></div><div><dt>Collection point</dt><dd>Collect from each stall in the school canteen</dd></div><div><dt>Payment</dt><dd id="review-payment">Pay at pickup (preview)</dd></div><div id="review-notes-row" hidden><dt>Order notes</dt><dd id="review-notes"></dd></div></dl><button type="button" class="button" id="edit-checkout">← Edit details</button></section>
+          <section id="checkout-review" class="checkout-review" hidden aria-labelledby="review-title"><span class="review-check" aria-hidden="true">✓</span><p class="eyebrow">READY FOR A FINAL LOOK</p><h2 id="review-title" tabindex="-1">Your pre-order preview.</h2><p class="review-intro">Check the details below. This preview has not been sent to the canteen.</p><dl><div><dt>Collecting for</dt><dd id="review-student"></dd></div><div><dt>Pickup</dt><dd id="review-pickup"></dd></div><div><dt>Collection point</dt><dd>Collect from each stall in the school canteen</dd></div><div><dt>Payment</dt><dd id="review-payment">Pay at pickup (preview)</dd></div><div id="review-notes-row" hidden><dt>Order notes</dt><dd id="review-notes"></dd></div></dl><div class="review-actions"><button type="button" class="button secondary-button" id="edit-checkout">← Edit details</button><button type="button" class="button" id="confirm-order">Confirm order <span aria-hidden="true">→</span></button></div><p class="field-help">The next step asks you to confirm this demo order.</p>
+          <dialog id="order-confirm-dialog" class="order-dialog" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-description"><span class="review-check" aria-hidden="true">✓</span><p class="eyebrow">ONE LAST CHECK</p><h2 id="confirm-dialog-title">Confirm your order?</h2><p id="confirm-dialog-description">Your demo pre-order will be confirmed and your cart will be cleared. No order will be sent to a stall and no payment will be taken.</p><p class="dialog-total">Order total <strong>${money(total())}</strong></p><p id="confirm-order-error" class="field-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button secondary-button" id="cancel-order" autofocus>Go back</button><button type="button" class="button" id="accept-order">Yes, confirm order</button></div></dialog></section>
         </div>
         <aside class="order-summary checkout-summary" aria-labelledby="summary-heading"><div class="summary-heading"><div><p class="eyebrow">YOUR BREAK, SORTED</p><h2 id="summary-heading">Order summary</h2></div><a class="text-link" href="${url('cart')}">Edit cart</a></div>
           ${groups.map(s=>`<section class="checkout-stall"><h3>${s.name}</h3>${wait}<ul>${s.menu.filter(m=>cart[s.slug+':'+m[0]]).map(m=>`<li><span class="summary-qty">${cart[s.slug+':'+m[0]]}×</span><span>${m[1]}</span><strong>${money(cart[s.slug+':'+m[0]]*m[3])}</strong></li>`).join('')}</ul></section>`).join('')}
@@ -105,10 +109,27 @@
       </div>`}
     </main>`;
   }
+  const escapeHTML = value => String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const formatOrderTime = value => new Intl.DateTimeFormat('en-SG',{
+    timeZone:'Asia/Singapore',weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'
+  }).format(new Date(value))+' (SGT)';
+  function confirmationPage() {
+    let order=null;
+    try { order=window.demoOrders.parse(sessionStorage.getItem(receiptKey)); } catch { /* Show the missing-receipt state. */ }
+    if(!order) return `<main id="main" class="checkout-page"><div class="checkout-title"><p class="eyebrow">YOUR PRE-ORDER</p><h1>Nothing here yet<span class="serif">.</span></h1></div><section class="empty-cart"><span class="empty-bag">${bag}</span><h2>No confirmed order in this tab.</h2><p>Choose your food and confirm it at checkout to see the details here.</p><a class="button" href="${url('')}">Explore the stalls ↗</a></section></main>`;
+    const groups=[...new Set(order.items.map(item=>item.stall))];
+    const itemCount=order.items.reduce((sum,item)=>sum+item.quantity,0);
+    return `<main id="main" class="confirmation-page"><section class="confirmation-heading"><span class="success-symbol" aria-hidden="true">✓</span><p class="eyebrow">DEMO ORDER CONFIRMED</p><h1>Your order has been sent!</h1><p>More time for your break. Here are your pre-order details.</p></section>
+      <p class="preview-notice"><strong>Demo only.</strong> No order has actually been sent to a stall and no payment has been taken.</p>
+      <div class="receipt-layout"><section class="receipt-card" aria-labelledby="receipt-heading"><div class="receipt-heading"><div><p class="eyebrow">YOUR ORDER REFERENCE</p><h2 id="receipt-heading">${escapeHTML(order.id)}</h2></div><span class="receipt-badge">CONFIRMED · DEMO</span></div><p class="receipt-created">Confirmed ${escapeHTML(formatOrderTime(order.createdAt))}</p>
+      ${groups.map(stall=>{const items=order.items.filter(item=>item.stall===stall);return `<section class="receipt-stall"><div class="receipt-stall-title"><div><p class="eyebrow">STALL ${escapeHTML(items[0].unit)}</p><h3>${escapeHTML(stall)}</h3></div>${wait}</div><ul>${items.map(item=>`<li><span class="summary-qty">${item.quantity}×</span><span>${escapeHTML(item.name)}<small>${money(item.price)} each</small></span><strong>${money(item.price*item.quantity)}</strong></li>`).join('')}</ul></section>`;}).join('')}
+      <div class="receipt-total"><span>Total (${itemCount} ${itemCount===1?'item':'items'})</span><strong>${money(order.total)}</strong></div><p class="field-help">All prices in Singapore dollars.</p></section>
+      <aside class="receipt-details"><h2>Pickup details</h2><dl><div><dt>Collecting for</dt><dd>${escapeHTML(order.studentName)}<small>Class ${escapeHTML(order.studentClass)}</small></dd></div><div><dt>Pickup date & time</dt><dd>${escapeHTML(formatOrderTime(`${order.pickupDate}T${order.pickupTime}:00+08:00`))}</dd></div><div><dt>Where to collect</dt><dd>School canteen<small>Collect each item directly from its stall.</small></dd></div><div><dt>Payment</dt><dd>${order.paymentMethod==='online'?`Online payment · demo<small>Test card ending ${escapeHTML(order.lastFour)}. No charge was made.</small>`:`Pay at pickup · demo<small>${money(order.total)} would be due at the stalls.</small>`}</dd></div>${order.notes?`<div><dt>Order notes</dt><dd class="receipt-notes">${escapeHTML(order.notes)}</dd></div>`:''}</dl><p class="receipt-tip">Keep this order reference handy when collecting your food.</p></aside></div><div class="receipt-bottom"><a class="button" href="${url('')}">Back to stalls <span aria-hidden="true">↗</span></a><span>This demo receipt stays available in this browser tab.</span></div></main>`;
+  }
   const app = document.getElementById('app');
   function render() {
     const stall = stalls.find(s=>s.slug===page);
-    app.innerHTML = header() + (page==='checkout'?checkoutPage():page==='cart'?cartPage():stall?stallPage(stall):home()) + footer();
+    app.innerHTML = header() + (page==='order-confirmation'?confirmationPage():page==='checkout'?checkoutPage():page==='cart'?cartPage():stall?stallPage(stall):home()) + footer();
   }
   let toastTimer;
   function announce(message) {
@@ -121,7 +142,7 @@
   function save() {
     try { localStorage.setItem(cartKey, JSON.stringify(cart)); }
     catch { storageAvailable = false; }
-    document.querySelectorAll('.cart-count').forEach(el=>{el.textContent=count();el.setAttribute('aria-label',`${count()} items`);});
+    document.querySelectorAll('.cart-count').forEach(el=>{el.textContent=count();el.setAttribute('aria-label',`${count()} ${count()===1?'item':'items'}`);});
     document.querySelectorAll('[data-item-summary]').forEach(el=>el.textContent=`${count()} ${count()===1?'item':'items'} in your cart`);
     document.querySelectorAll('[data-cart-total]').forEach(el=>el.textContent=money(total()));
     if (!storageAvailable) announce('Your browser cannot save this cart. Please enable local storage to keep your items between pages.');
@@ -198,6 +219,26 @@
     }
     document.getElementById('card-error-summary').hidden=!Object.values(cardFields).some(id=>document.getElementById(id).getAttribute('aria-invalid')==='true');
   }
+  function editCheckout() {
+    reviewedOrder=null;
+    document.getElementById('checkout-form').hidden=false;
+    document.getElementById('checkout-review').hidden=true;
+    document.getElementById('review-order-button').hidden=false;
+    const steps=app.querySelectorAll('.checkout-steps li');
+    steps[1].setAttribute('aria-current','step');
+    steps[2].removeAttribute('aria-current');
+    document.getElementById('student-name').focus();
+  }
+  function reviewStillValid() {
+    if(!reviewedOrder || !count()) return false;
+    validatePickup(); validatePayment(true);
+    const form=document.getElementById('checkout-form');
+    if(form.checkValidity()) return true;
+    document.getElementById('order-confirm-dialog').close();
+    editCheckout(); form.reportValidity();
+    announce('Please check your details again before confirming.');
+    return false;
+  }
   app.addEventListener('change',event=>{
     if (event.target.name!=='paymentMethod') return;
     const online=event.target.value==='online';
@@ -235,14 +276,36 @@
       validatePayment(true);
       announce('Test card details filled. No payment will be processed.');
     }
-    if(event.target.closest('#edit-checkout')) {
-      document.getElementById('checkout-form').hidden=false;
-      document.getElementById('checkout-review').hidden=true;
-      document.getElementById('review-order-button').hidden=false;
-      const steps=app.querySelectorAll('.checkout-steps li');
-      steps[1].setAttribute('aria-current','step');
-      steps[2].removeAttribute('aria-current');
-      document.getElementById('student-name').focus();
+    if(event.target.closest('#edit-checkout')) editCheckout();
+    if(event.target.closest('#confirm-order') && reviewStillValid()) {
+      document.getElementById('confirm-order-error').hidden=true;
+      document.getElementById('order-confirm-dialog').showModal();
+    }
+    if(event.target.closest('#cancel-order')) document.getElementById('order-confirm-dialog').close();
+    if(event.target.closest('#accept-order') && !confirmingOrder && reviewStillValid()) {
+      confirmingOrder=true;
+      const accept=document.getElementById('accept-order');
+      accept.disabled=true;
+      const id='QS-DEMO-'+crypto.randomUUID().replaceAll('-','').slice(0,8).toUpperCase();
+      const order=window.demoOrders.create(reviewedOrder,id,new Date().toISOString());
+      let previousReceipt=null;
+      try {
+        previousReceipt=sessionStorage.getItem(receiptKey);
+        sessionStorage.setItem(receiptKey,JSON.stringify(order));
+        localStorage.setItem(cartKey,'{}');
+      } catch {
+        try {
+          if(previousReceipt===null) sessionStorage.removeItem(receiptKey);
+          else sessionStorage.setItem(receiptKey,previousReceipt);
+        } catch { /* Browser storage may be unavailable. */ }
+        confirmingOrder=false; accept.disabled=false;
+        const error=document.getElementById('confirm-order-error');
+        error.textContent='Your browser could not save this demo order. Enable browser storage and try again. Your cart has not been changed.';
+        error.hidden=false;
+        return;
+      }
+      cart={};
+      location.assign(url('order-confirmation'));
     }
   });
   app.addEventListener('submit',event=>{
@@ -258,6 +321,15 @@
     const online=fields.paymentMethod.value==='online';
     const lastFour=document.getElementById('card-number').value.replace(/[ -]/g,'').slice(-4);
     document.getElementById('review-payment').textContent=online?`Online payment demo · card ending ${lastFour} · no charge`:'Pay at pickup (preview)';
+    reviewedOrder={
+      studentName:fields.studentName.value.trim(), studentClass:fields.studentClass.value.trim(),
+      pickupDate:fields.pickupDate.value,pickupTime:fields.pickupTime.value,notes:fields.notes.value.trim(),
+      paymentMethod:fields.paymentMethod.value,lastFour:online?lastFour:'',
+      items:Object.entries(cart).map(([key,quantity])=>{
+        const {stall,item}=catalogue.get(key);
+        return {stall:stall.name,unit:stall.unit,name:item[1],price:item[3],quantity};
+      })
+    };
     document.getElementById('review-notes').textContent=fields.notes.value.trim();
     document.getElementById('review-notes-row').hidden=!fields.notes.value.trim();
     event.target.hidden=true;
@@ -268,6 +340,7 @@
     steps[2].setAttribute('aria-current','step');
     document.getElementById('review-title').focus();
   });
+  window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
   window.addEventListener('storage',event=>{if(event.key===cartKey)location.reload();});
   render();
 })();
