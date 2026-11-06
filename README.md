@@ -1,13 +1,13 @@
 # Queue Skip
 
-A hawker food ordering prototype, built as a static website for GitHub Pages.
+A school canteen pre-ordering prototype, built as a static website for GitHub Pages.
 
 ## Pages
 
 - `/` — six hawker stalls, category filters, and search by stall or dish.
 - `/golden-grain/`, `/wok-and-roll/`, `/coconut-corner/`, `/prata-parade/`, `/kopi-kakis/`, `/sweet-lah/` — individual menus with sample SGD prices and a temporary five-minute waiting estimate.
 - `/cart/` — browser-saved cart grouped by stall, with quantity changes, removal, and a calculated total.
-- `/checkout/` — intentionally blank placeholder.
+- `/checkout/` — student name and class, pickup date/time, optional notes, grouped order summary, and an editable pre-order preview.
 
 On this repository's GitHub Pages site, these paths sit under `/queue-skip/`. Each route has its own `index.html`, so direct visits and refreshes work without a routing server. GitHub Pages redirects directory paths to their trailing-slash versions.
 
@@ -31,4 +31,4 @@ In repository **Settings → Pages**, choose **Deploy from a branch**, select **
 
 ## Prototype scope
 
-Cart contents are stored in this browser's local storage, shared across stalls, and retained on refresh. Prices and waiting estimates are sample data. Checkout is blank; orders are not submitted and no payments are taken. Supabase is not connected yet. Food illustrations are original inline SVGs. Google Fonts are optional; system fonts are used if unavailable.
+Cart contents are stored in this browser's local storage, shared across stalls, and retained on refresh. Prices and waiting estimates are sample data. Checkout validates required fields and a pickup time at least five minutes ahead in Singapore time. Student details stay in page memory and are not saved. The pay-at-pickup choice is a placeholder; orders are not submitted and no payments are taken. Supabase is not connected yet. Food illustrations are original inline SVGs. Google Fonts are optional; system fonts are used if unavailable.

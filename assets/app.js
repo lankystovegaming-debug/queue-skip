@@ -21,10 +21,9 @@
   const total = () => Object.entries(cart).reduce((sum,[key,qty]) => sum + catalogue.get(key).item[3] * qty, 0);
   const bag = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 8h14l1 13H4L5 8Z"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/></svg>';
   const clock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>';
-  const arrow = '<span aria-hidden="true">↗</span>';
   const logo = `<span class="logo-mark" aria-hidden="true">≋</span><span>queue<span class="logo-light">skip</span><span class="logo-dot">.</span></span>`;
   const wait = `<span class="wait">${clock} Estimated waiting time: 5 minutes</span>`;
-  const header = () => `<header class="site-header"><div class="header-inner"><a class="brand" href="${url('')}" aria-label="Queue Skip home">${logo}</a><nav aria-label="Main navigation"><a class="nav-stalls ${!page || page !== 'cart' ? 'active' : ''}" href="${url('')}">Explore stalls</a><a class="cart-link" href="${url('cart')}">${bag}<span>Your cart</span><span class="cart-count" aria-label="${count()} items">${count()}</span></a></nav></div></header>`;
+  const header = () => `<header class="site-header"><div class="header-inner"><a class="brand" href="${url('')}" aria-label="Queue Skip home">${logo}</a><nav aria-label="Main navigation"><a class="nav-stalls ${page!=='cart' && page!=='checkout' ? 'active' : ''}" href="${url('')}">Explore stalls</a><a class="cart-link" href="${url('cart')}">${bag}<span>Your cart</span><span class="cart-count" aria-label="${count()} items">${count()}</span></a></nav></div></header>`;
   const footer = () => `<footer class="site-footer"><a class="brand" href="${url('')}">${logo}</a><span>Good food. Less waiting.</span><span>Made for your next makan.</span></footer>`;
   function art(kind, label='', variant=0) {
     // Original vector food illustrations; no external image requests.
@@ -37,7 +36,7 @@
     return `<svg class="food-art" viewBox="0 0 300 200" role="img" aria-label="${label}">${food}</svg>`;
   }
   function home() {
-    return `<main id="main"><section class="hero"><div class="hero-copy"><p class="eyebrow"><span class="tiny-star">✳</span> YOUR HAWKER FAVOURITES, ONE TAP AWAY</p><h1>More makan.<br>Less <span class="serif">waiting.</span></h1><p class="hero-text">From your first kopi to your last bite.<br>Order ahead and skip straight to the good part.</p><a class="button" href="#stalls">Find your next bite <span aria-hidden="true">↓</span></a><div class="hero-note"><span class="small-dot"></span> Made for the way we makan.</div></div><div class="hero-visual" aria-hidden="true"><div class="hero-disc"></div><div class="hero-rice">${art('rice')}</div><div class="hero-kopi">${art('coffee')}</div><div class="hero-sticker">LESS QUEUE<span>more shiok!</span><i>✳</i></div><div class="hero-caption">Your usual, without the usual wait.</div></div></section><section id="stalls" class="stalls-section"><div class="section-top"><div><p class="eyebrow">A LITTLE OF EVERYTHING</p><h2>What are you craving?</h2></div><span class="stall-total">6 stalls. So many good choices.</span></div><div class="discovery"><div class="filters" role="group" aria-label="Filter stalls by category">${['All stalls','Rice','Noodles','Prata','Drinks','Desserts'].map((c,i)=>`<button class="filter ${!i?'selected':''}" data-category="${c}" aria-pressed="${!i}">${c}</button>`).join('')}</div><label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 5 5"/></svg><input id="search" type="search" placeholder="Search stalls or dishes" aria-label="Search stalls or dishes"></label></div><p id="results-status" class="sr-only" role="status"></p><div class="stall-grid" id="stall-grid">${stalls.map(stallCard).join('')}</div><p class="no-results" id="no-results" hidden>No stalls found. Try another dish or category.</p></section><section class="bottom-note"><span class="note-symbol" aria-hidden="true">✳</span><div><h2>All your favourites. One happy cart.</h2><p>Mix it up across stalls and make your next meal a good one.</p></div><a href="${url('cart')}">See your cart <span aria-hidden="true">→</span></a></section></main>`;
+    return `<main id="main"><section class="hero"><div class="hero-copy"><p class="eyebrow"><span class="tiny-star">✳</span> YOUR CANTEEN FAVOURITES, ONE TAP AWAY</p><h1>More makan.<br>Less <span class="serif">waiting.</span></h1><p class="hero-text">From your first kopi to your last bite.<br>Order ahead and skip straight to the good part.</p><a class="button" href="#stalls">Find your next bite <span aria-hidden="true">↓</span></a><div class="hero-note"><span class="small-dot"></span> Made for the way we makan.</div></div><div class="hero-visual" aria-hidden="true"><div class="hero-disc"></div><div class="hero-rice">${art('rice')}</div><div class="hero-kopi">${art('coffee')}</div><div class="hero-sticker">LESS QUEUE<span>more shiok!</span><i>✳</i></div><div class="hero-caption">Your usual, without the usual wait.</div></div></section><section id="stalls" class="stalls-section"><div class="section-top"><div><p class="eyebrow">A LITTLE OF EVERYTHING</p><h2>What are you craving?</h2></div><span class="stall-total">6 stalls. So many good choices.</span></div><div class="discovery"><div class="filters" role="group" aria-label="Filter stalls by category">${['All stalls','Rice','Noodles','Prata','Drinks','Desserts'].map((c,i)=>`<button class="filter ${!i?'selected':''}" data-category="${c}" aria-pressed="${!i}">${c}</button>`).join('')}</div><label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 5 5"/></svg><input id="search" type="search" placeholder="Search stalls or dishes" aria-label="Search stalls or dishes"></label></div><p id="results-status" class="sr-only" role="status"></p><div class="stall-grid" id="stall-grid">${stalls.map(stallCard).join('')}</div><p class="no-results" id="no-results" hidden>No stalls found. Try another dish or category.</p></section><section class="bottom-note"><span class="note-symbol" aria-hidden="true">✳</span><div><h2>All your favourites. One happy cart.</h2><p>Mix it up across stalls and make your next meal a good one.</p></div><a href="${url('cart')}">See your cart <span aria-hidden="true">→</span></a></section></main>`;
   }
   function stallCard(s) {
     return `<a class="stall-card" href="${url(s.slug)}"><div class="card-visual" style="--food-bg:${s.color}"><span class="stall-unit">STALL ${s.unit}</span>${art(s.icon,s.label,s.unit==='03')}<span class="category-tag">${s.category}</span></div><div class="card-body"><div class="card-heading"><h3>${s.name}</h3><span class="card-arrow" aria-hidden="true">↗</span></div><p>${s.label}</p><div class="card-bottom">${wait}<span class="starting-price">From ${money(Math.min(...s.menu.map(m=>m[3])))}</span></div></div></a>`;
@@ -52,10 +51,51 @@
     const groups = stalls.filter(s=>s.menu.some(m=>cart[s.slug+':'+m[0]]));
     return `<main id="main" class="cart-page"><a class="back-link" href="${url('')}">← Keep exploring</a><div class="cart-title"><p class="eyebrow">YOUR NEXT GOOD MEAL</p><h1>Your cart<span class="serif">.</span></h1><p>${count()?`${count()} ${count()===1?'item':'items'} from ${groups.length} ${groups.length===1?'stall':'stalls'}. A little of what you love.`:'A good meal starts with a little exploring.'}</p></div>${count()?`<div class="cart-layout"><div class="cart-groups">${groups.map(s=>`<section class="cart-group"><div class="cart-group-header"><div><span class="eyebrow">STALL ${s.unit}</span><h2><a href="${url(s.slug)}">${s.name}</a></h2></div><a class="text-link" href="${url(s.slug)}">Add more ↗</a></div><div class="cart-wait">${wait}</div>${s.menu.filter(m=>cart[s.slug+':'+m[0]]).map(m=>{const key=s.slug+':'+m[0],qty=cart[key];return `<article class="cart-row"><div><h3>${m[1]}</h3><span class="unit-price">${money(m[3])} each</span></div><div class="cart-row-actions">${quantity(key,qty,m[1])}<strong>${money(m[3]*qty)}</strong><button class="remove-button" data-remove="${key}" aria-label="Remove all ${m[1]} from cart">Remove</button></div></article>`;}).join('')}</section>`).join('')}</div><aside class="order-summary"><p class="eyebrow">LOOKING GOOD</p><h2>Your meal, sorted.</h2><div class="summary-line"><span>Subtotal (${count()} ${count()===1?'item':'items'})</span><span>${money(total())}</span></div><div class="summary-total"><span>Total</span><strong>${money(total())}</strong></div><a class="button" href="${url('checkout')}">Continue to checkout <span aria-hidden="true">→</span></a><p class="summary-note">All prices in Singapore dollars.</p></aside></div>`:`<section class="empty-cart"><span class="empty-bag">${bag}</span><h2>Room for something shiok.</h2><p>Pick a stall, find your favourites, and add them here.</p><a class="button" href="${url('')}">Explore the stalls <span aria-hidden="true">↗</span></a></section>`}</main>`;
   }
+  function singaporeTime(date = new Date()) {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+      timeZone:'Asia/Singapore', year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', hourCycle:'h23'
+    }).formatToParts(date).map(part=>[part.type,part.value]));
+    return {date:`${parts.year}-${parts.month}-${parts.day}`, time:`${parts.hour}:${parts.minute}`};
+  }
+  function checkoutPage() {
+    const today = singaporeTime().date;
+    const groups = stalls.filter(s=>s.menu.some(m=>cart[s.slug+':'+m[0]]));
+    return `<main id="main" class="checkout-page">
+      <a class="back-link" href="${url('cart')}">← Back to your cart</a>
+      <div class="checkout-title"><p class="eyebrow">MAKE THE MOST OF YOUR BREAK</p><h1>Checkout<span class="serif">.</span></h1><p>A good meal, ready for your school day.</p></div>
+      ${!count()?`<section class="empty-cart"><span class="empty-bag">${bag}</span><h2>Pick your favourites first.</h2><p>Add something from the canteen before checking out.</p><a class="button" href="${url('')}">Explore the stalls ↗</a></section>`:`
+      <ol class="checkout-steps" aria-label="Checkout progress"><li><span>✓</span> Your cart</li><li aria-current="step"><span>2</span> Checkout</li><li><span>3</span> Review</li></ol>
+      <p class="preview-notice"><strong>A first look at checkout.</strong> This is a preview. No order will be sent and no payment will be taken.</p>
+      <div class="checkout-layout">
+        <div>
+          <form id="checkout-form">
+            <fieldset class="checkout-section"><legend><span class="section-number">01</span> Your details</legend><p class="field-intro">Let the stall know who is collecting. All fields are required unless marked optional.</p>
+              <div class="field-grid"><label class="form-field" for="student-name">Student name<input id="student-name" name="studentName" type="text" autocomplete="name" placeholder="Name for collection" maxlength="70" required></label>
+              <label class="form-field" for="student-class">Class<input id="student-class" name="studentClass" type="text" placeholder="e.g. 3A" maxlength="30" required></label></div>
+            </fieldset>
+            <fieldset class="checkout-section"><legend><span class="section-number">02</span> Collection</legend><div class="collection-location">${bag}<div><strong>Collect at the school canteen</strong><p>Pick up each item directly from its stall.</p></div><span class="collection-tag">PICKUP</span></div>
+              <div class="field-grid"><label class="form-field" for="pickup-date">Pickup date<input id="pickup-date" name="pickupDate" type="date" min="${today}" value="${today}" required></label>
+              <label class="form-field" for="pickup-time">Pickup time<input id="pickup-time" name="pickupTime" type="time" required aria-describedby="pickup-help"></label></div>
+              <p id="pickup-help" class="field-help">Choose your recess or lunch break, at least 5 minutes from now. All times are Singapore time.</p>
+              <label class="form-field notes-field" for="order-notes">Order notes <span>(optional)</span><textarea id="order-notes" name="notes" maxlength="300" rows="3" placeholder="Anything you would like the stall to know?"></textarea></label>
+            </fieldset>
+            <fieldset class="checkout-section"><legend><span class="section-number">03</span> Payment</legend><div class="payment-option"><span class="payment-radio" aria-hidden="true"></span><div><strong>Pay at pickup</strong><p>A placeholder for now. Online payment is not enabled.</p></div></div></fieldset>
+          </form>
+          <section id="checkout-review" class="checkout-review" hidden aria-labelledby="review-title"><span class="review-check" aria-hidden="true">✓</span><p class="eyebrow">READY FOR A FINAL LOOK</p><h2 id="review-title" tabindex="-1">Your pre-order preview.</h2><p class="review-intro">Check the details below. This preview has not been sent to the canteen.</p><dl><div><dt>Collecting for</dt><dd id="review-student"></dd></div><div><dt>Pickup</dt><dd id="review-pickup"></dd></div><div><dt>Collection point</dt><dd>Collect from each stall in the school canteen</dd></div><div><dt>Payment</dt><dd>Pay at pickup (preview)</dd></div><div id="review-notes-row" hidden><dt>Order notes</dt><dd id="review-notes"></dd></div></dl><button type="button" class="button" id="edit-checkout">← Edit details</button></section>
+        </div>
+        <aside class="order-summary checkout-summary" aria-labelledby="summary-heading"><div class="summary-heading"><div><p class="eyebrow">YOUR BREAK, SORTED</p><h2 id="summary-heading">Order summary</h2></div><a class="text-link" href="${url('cart')}">Edit cart</a></div>
+          ${groups.map(s=>`<section class="checkout-stall"><h3>${s.name}</h3>${wait}<ul>${s.menu.filter(m=>cart[s.slug+':'+m[0]]).map(m=>`<li><span class="summary-qty">${cart[s.slug+':'+m[0]]}×</span><span>${m[1]}</span><strong>${money(cart[s.slug+':'+m[0]]*m[3])}</strong></li>`).join('')}</ul></section>`).join('')}
+          <div class="summary-line"><span>Subtotal (${count()} ${count()===1?'item':'items'})</span><span>${money(total())}</span></div><div class="summary-total"><span>Total</span><strong>${money(total())}</strong></div>
+          <button class="button" id="review-order-button" type="submit" form="checkout-form">Review pre-order <span aria-hidden="true">→</span></button><p class="summary-note">Preview only · All prices in SGD</p>
+        </aside>
+      </div>`}
+    </main>`;
+  }
   const app = document.getElementById('app');
   function render() {
     const stall = stalls.find(s=>s.slug===page);
-    app.innerHTML = header() + (page==='cart'?cartPage():stall?stallPage(stall):home()) + footer();
+    app.innerHTML = header() + (page==='checkout'?checkoutPage():page==='cart'?cartPage():stall?stallPage(stall):home()) + footer();
   }
   let toastTimer;
   function announce(message) {
@@ -111,6 +151,53 @@
     app.querySelector('#results-status').textContent=`${matches.length} ${matches.length===1?'stall':'stalls'} found`;
   }
   app.addEventListener('input',event=>{if(event.target.id==='search')filterStalls();});
+  function validatePickup() {
+    const form = document.getElementById('checkout-form');
+    if (!form) return;
+    const name = form.elements.studentName;
+    const studentClass = form.elements.studentClass;
+    name.setCustomValidity(name.value.trim() ? '' : 'Enter a name for collection.');
+    studentClass.setCustomValidity(studentClass.value.trim() ? '' : 'Enter your class.');
+    const earliest = singaporeTime(new Date(Math.ceil((Date.now()+5*60*1000)/60000)*60000));
+    const date = form.elements.pickupDate;
+    const time = form.elements.pickupTime;
+    date.min = singaporeTime().date;
+    time.setCustomValidity(date.value && time.value && `${date.value}T${time.value}` < `${earliest.date}T${earliest.time}` ? 'Choose a pickup time at least 5 minutes from now (Singapore time).' : '');
+  }
+  app.addEventListener('input',event=>{
+    if(event.target.closest('#checkout-form')) validatePickup();
+  });
+  app.addEventListener('click',event=>{
+    if(event.target.closest('#review-order-button')) validatePickup();
+    if(event.target.closest('#edit-checkout')) {
+      document.getElementById('checkout-form').hidden=false;
+      document.getElementById('checkout-review').hidden=true;
+      document.getElementById('review-order-button').hidden=false;
+      const steps=app.querySelectorAll('.checkout-steps li');
+      steps[1].setAttribute('aria-current','step');
+      steps[2].removeAttribute('aria-current');
+      document.getElementById('student-name').focus();
+    }
+  });
+  app.addEventListener('submit',event=>{
+    if(event.target.id!=='checkout-form')return;
+    event.preventDefault();
+    validatePickup();
+    if(!event.target.reportValidity())return;
+    const fields=event.target.elements;
+    document.getElementById('review-student').textContent=`${fields.studentName.value.trim()} · ${fields.studentClass.value.trim()}`;
+    const pickup=new Date(`${fields.pickupDate.value}T${fields.pickupTime.value}:00+08:00`);
+    document.getElementById('review-pickup').textContent=new Intl.DateTimeFormat('en-SG',{timeZone:'Asia/Singapore',weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}).format(pickup)+' (SGT)';
+    document.getElementById('review-notes').textContent=fields.notes.value.trim();
+    document.getElementById('review-notes-row').hidden=!fields.notes.value.trim();
+    event.target.hidden=true;
+    document.getElementById('checkout-review').hidden=false;
+    document.getElementById('review-order-button').hidden=true;
+    const steps=app.querySelectorAll('.checkout-steps li');
+    steps[1].removeAttribute('aria-current');
+    steps[2].setAttribute('aria-current','step');
+    document.getElementById('review-title').focus();
+  });
   window.addEventListener('storage',event=>{if(event.key===cartKey)location.reload();});
   render();
 })();
